@@ -6,6 +6,7 @@
 #     MUTANT=service  ./checks/manifest-check.sh
 #     MUTANT=boot     ./checks/manifest-check.sh
 #     MUTANT=bind     ./checks/manifest-check.sh
+#     MUTANT=sentry   ./checks/manifest-check.sh
 #
 # WHY THIS FILE EXISTS, and it is not a style rule.
 #
@@ -37,6 +38,7 @@ cd "$(dirname "$0")/.."     # android/
 
 MANIFEST=app/src/main/AndroidManifest.xml
 SCHEDULER=app/src/main/kotlin/io/github/qwadratic/nfctimesheets/sync/SyncScheduler.kt
+TELEMETRY=app/src/main/kotlin/io/github/qwadratic/nfctimesheets/Telemetry.kt
 MUTANT="${MUTANT:-}"
 
 fail=0
@@ -46,6 +48,7 @@ check() { if [ "$1" = 1 ]; then ok "$2"; else bad "$2"; fi; }
 
 manifest="$(/bin/cat "$MANIFEST")"
 scheduler="$(/bin/cat "$SCHEDULER")"
+telemetry="$(/bin/cat "$TELEMETRY")"
 
 # The mutants edit the STRINGS this run reads, never the files on disk. A check that
 # rewrites a source file to prove itself is one interrupted run away from committing the
@@ -55,6 +58,7 @@ case "$MUTANT" in
   service) manifest="${manifest//.sync.ShiftSyncJob/.sync.NotDeclared}" ;;
   boot)    manifest="${manifest//android.permission.RECEIVE_BOOT_COMPLETED/android.permission.NOTHING_LIKE_IT}" ;;
   bind)    manifest="${manifest//android.permission.BIND_JOB_SERVICE/android.permission.NOTHING_LIKE_IT}" ;;
+  sentry)  manifest="${manifest//io.sentry.auto-init/io.sentry.auto-init.removed}" ;;
   "")      ;;
   *)       echo "manifest-check: unknown MUTANT=$MUTANT" >&2; exit 2 ;;
 esac
@@ -99,6 +103,15 @@ check "$(has 'JobScheduler.RESULT_SUCCESS' "$scheduler" && echo 1 || echo 0)" \
   "schedule()'s RETURN VALUE is compared, not discarded — RESULT_FAILURE is not an exception"
 check "$(has 'Armed.Refused' "$scheduler" && echo 1 || echo 0)" \
   "…and a refusal becomes a value the screen can show, not a swallowed throw"
+
+# 6. sentry-android contributes SentryInitProvider, which Android constructs BEFORE
+#    Application.onCreate(). Telemetry.start deliberately owns the one guarded init path;
+#    leaving provider auto-init enabled lets SDK setup kill the process before that catch
+#    block exists. Keep this exact one-line form so the source check binds name and value.
+if has 'SentryAndroid.init' "$telemetry"; then
+  check "$(has '<meta-data android:name="io.sentry.auto-init" android:value="false" />' "$manifest" && echo 1 || echo 0)" \
+    "manual Sentry init is guarded, so provider auto-init is disabled before Application.onCreate"
+fi
 
 echo
 if [ "$fail" -eq 0 ]; then

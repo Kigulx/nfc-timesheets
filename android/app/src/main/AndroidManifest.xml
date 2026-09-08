@@ -83,6 +83,17 @@
         android:theme="@style/Theme.TimeSheets">
 
         <!--
+          sentry-android contributes SentryInitProvider, and Android creates providers
+          before TimeSheetsApplication.onCreate(). Disable that implicit path: the app's
+          one Sentry initialization lives in Telemetry.start(), where a blank DSN is a
+          supported no-op and every SDK failure is caught (decision-70's fail-soft rule).
+
+          Keep this on one line: checks/manifest-check.sh binds the name and false value
+          together and mutation-tests the startup guard.
+        -->
+        <meta-data android:name="io.sentry.auto-init" android:value="false" />
+
+        <!--
           ONE tap surface. Both dispatch paths converge here, so TapInbox's 3-second
           window can collapse a physical tap that gets delivered twice.
 
