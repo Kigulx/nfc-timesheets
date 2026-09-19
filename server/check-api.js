@@ -4944,6 +4944,29 @@ try {
       assert.equal(stateOf("pl-a"), "never_attempted", "a building with no address was never asked about");
     });
 
+    await test("TASK-338: address edits replace stale pins and a late lookup cannot overwrite a newer address", async () => {
+      const input = { slug: "address-audit", name: "Address audit", address: "Old address", lat: 48.2, lng: 16.3 };
+      const { location } = await expect(await asAdmin("/admin/locations", { method: "POST", body: input }), 201);
+      try {
+        setGeocoderForTest(async () => ({ status: "OK", lat: 48.21, lng: 16.31, street_view_status: null }));
+        const changed = await expect(await asAdmin("/admin/locations", { method: "POST", body: { ...input, id: location.id, address: "New address" } }), 200);
+        assert.equal(changed.location.lat, 48.21, "echoed old coordinates must not win over a changed address");
+        assert.equal((await asAdmin("/admin/locations", { method: "POST", body: { ...input, lat: null } })).status, 400);
+        let started;
+        const running = new Promise(resolve => { started = resolve; });
+        let finish;
+        setGeocoderForTest(() => new Promise(resolve => { finish = resolve; started(); }));
+        const pending = asAdmin(`/admin/locations/${location.id}/geocode`, { method: "POST" });
+        await running;
+        const manual = { ...input, id: location.id, address: "Third address", lat: 48.22, lng: 16.32 };
+        await expect(await asAdmin("/admin/locations", { method: "POST", body: manual }), 200);
+        finish({ status: "OK", lat: 1, lng: 2, street_view_status: null });
+        const late = await expect(await pending, 200);
+        assert.equal(late.location.address, "Third address");
+        assert.equal(late.location.lat, 48.22, "old lookup must not move the new pin");
+      } finally { setGeocoderForTest(null); }
+    });
+
     // MEASURED AGAINST THE LIVE KEY, and the reason this guard exists at all:
     //   "Nirgendwogasse 99999, 1010 Wien" -> HTTP 200, status OK, partial_match: true,
     //                                        types ['postal_code'], APPROXIMATE,
@@ -4982,6 +5005,13 @@ try {
           results: [{ types: ["locality"], geometry: { location: { lat: 48.2, lng: 16.37 }, location_type: "APPROXIMATE" } }],
         });
         assert.equal((await geocodeAddress("Wien")).status, "APPROXIMATE_ONLY");
+        reply({ status: "OK", results: [{ geometry: { location: { lat: 48.2, lng: 16.37 }, location_type: "GEOMETRIC_CENTER" } }] });
+        assert.equal((await geocodeAddress("A street without a house number")).status, "APPROXIMATE_ONLY");
+
+        for (const lat of [null, "48.2", 91]) {
+          reply({ status: "OK", results: [{ geometry: { location: { lat, lng: 16.37 }, location_type: "ROOFTOP" } }] });
+          assert.equal((await geocodeAddress("Malformed address result")).status, "malformed");
+        }
 
         // A real building-level answer still gets through, or the guard is just an outage.
         // The second call this makes is Street View metadata, which against the live key

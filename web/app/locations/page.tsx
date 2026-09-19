@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useFormatter, useTranslations } from 'next-intl'
 import { type FormEvent, useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
+import { AddressSearch } from '@/components/AddressSearch'
 import { ConfirmModal } from '@/components/ConfirmModal'
 import { Drawer } from '@/components/Drawer'
 import { EmptyState } from '@/components/EmptyState'
@@ -1880,12 +1881,23 @@ export default function LocationsPage() {
                 <input
                   type="text"
                   value={draft.address}
-                  onChange={(event) => setDraft({ ...draft, address: event.target.value })}
+                  onChange={(event) =>
+                    setDraft({ ...draft, address: event.target.value, lat: null, lng: null })
+                  }
                   maxLength={300}
                   autoComplete="off"
                   disabled={busy}
                 />
               </Field>
+              <AddressSearch
+                value={draft.address}
+                disabled={busy}
+                onSelect={(address) =>
+                  setDraft((current) =>
+                    current === null ? null : { ...current, address, lat: null, lng: null },
+                  )
+                }
+              />
 
               {/* The client select carries "+ Neuer Kunde …" and expands one more field IN
                   PLACE. Not a second drawer on top of this one: a focus trap inside a focus

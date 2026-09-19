@@ -583,7 +583,11 @@
     "errorSerialShape": "Das sieht nicht nach einer Seriennummer aus. Erwartet werden mindestens vier Bytes in Hexadezimalschreibweise, zum Beispiel 04:A1:A8:52:AE:5C:80.",
     "statusUnzoned": "Noch keine Zone angelegt",
     "unboundHeading": "Zonen ohne Objekt",
-    "unboundNote": "Diese Karten wurden an einer Tür beschrieben, bevor feststand, zu welchem Objekt sie gehören. Sie sind noch keinem Objekt zugeordnet und starten daher keine Schicht. Ein Betreiber ordnet sie vor Ort in der App zu — hier ist dazu nichts zu tun."
+    "unboundNote": "Diese Karten wurden an einer Tür beschrieben, bevor feststand, zu welchem Objekt sie gehören. Sie sind noch keinem Objekt zugeordnet und starten daher keine Schicht. Ein Betreiber ordnet sie vor Ort in der App zu — hier ist dazu nichts zu tun.",
+    "addressSearch": "Adresse in Österreich suchen",
+    "addressSearchHint": "Straße und Hausnummer suchen. Ein Vorschlag füllt die Adresse oben aus; Sie können sie danach bearbeiten.",
+    "addressSearchLoading": "Adressvorschläge werden geladen. Sie können die Adresse bereits manuell eingeben.",
+    "addressSearchUnavailable": "Adressvorschläge sind nicht verfügbar. Bitte Straße, Hausnummer und Postleitzahl manuell eingeben."
   },
   "clients": {
     "heading": "Kunden",
