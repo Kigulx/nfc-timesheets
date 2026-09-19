@@ -85,7 +85,10 @@ async function portalView({ params, ip }) {
     `SELECT g.location_id, l.name
        FROM portal_grants g
        JOIN locations l ON l.id = g.location_id
-      WHERE g.token_hash = $1 AND g.revoked_at IS NULL`,
+       JOIN contacts c ON c.id = g.contact_id
+       JOIN clients cl ON cl.id = c.client_id
+      WHERE g.token_hash = $1 AND g.revoked_at IS NULL
+        AND l.active AND c.active AND cl.active AND l.client_id = c.client_id`,
     [hashToken(token)],
   );
   if (!grant) {

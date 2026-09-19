@@ -681,8 +681,12 @@ async function upsertWorker({ body }) {
     }
 
     const row = await one(
-      `UPDATE workers SET name = $2, email = $3, phone = $4, hourly_rate_cents = $5, active = $6 WHERE id = $1
-       RETURNING ${WORKER_COLS}`,
+      `WITH changed AS (
+         UPDATE workers SET name = $2, email = $3, phone = $4, hourly_rate_cents = $5, active = $6
+         WHERE id = $1 RETURNING ${WORKER_COLS}
+       ), revoked AS (
+         DELETE FROM worker_sessions WHERE worker_id IN (SELECT id FROM changed WHERE NOT active)
+       ) SELECT * FROM changed`,
       [v.id(body.id, "id"), name, email, phone, rate, active],
     );
     if (!row) fail(404, "unknown_worker");
@@ -1627,13 +1631,22 @@ async function upsertLocation({ body }) {
     // how the NEXT building ends up unpinned.
     const clearsPin = "($5::double precision IS NULL AND lat IS NOT NULL)";
     row = await one(
-      `UPDATE locations SET slug = $2, name = $3, address = $4, lat = $5, lng = $6, active = $7,
+      `WITH previous AS MATERIALIZED (SELECT client_id FROM locations WHERE id = $1), changed AS (
+       UPDATE locations SET slug = $2, name = $3, address = $4, lat = $5, lng = $6, active = $7,
               client_id = $8, contact_id = $9, monthly_contract_cents = $10, target_minutes_per_month = $11,
               geocoded_at        = CASE WHEN ${clearsPin} THEN NULL ELSE geocoded_at        END,
               geocode_status     = CASE WHEN ${clearsPin} THEN NULL ELSE geocode_status     END,
               street_view_status = CASE WHEN ${clearsPin} THEN NULL ELSE street_view_status END
        WHERE id = $1
-       RETURNING ${LOCATION_COLS}`,
+       RETURNING ${LOCATION_COLS}
+       ), revoked AS (
+         UPDATE portal_grants SET revoked_at = now()
+         WHERE location_id IN (SELECT id FROM changed)
+           AND (NOT $7 OR (SELECT client_id FROM previous) IS DISTINCT FROM $8::bigint)
+           AND revoked_at IS NULL
+       ), zones_stood_down AS (
+         UPDATE zones SET active = false WHERE location_id IN (SELECT id FROM changed WHERE NOT active)
+       ) SELECT * FROM changed`,
       [targetId, ...values],
     );
     if (!row) fail(404, "unknown_location"); // deleted between the SELECT and here
@@ -2023,7 +2036,13 @@ async function upsertClient({ body }) {
     return { status: 201, body: { client: row } };
   }
 
-  const row = await one(`UPDATE clients SET name = $2, active = $3 WHERE id = $1 RETURNING ${CLIENT_COLS}`, [
+  const row = await one(`WITH changed AS (
+    UPDATE clients SET name = $2, active = $3 WHERE id = $1 RETURNING ${CLIENT_COLS}
+  ), revoked AS (
+    UPDATE portal_grants SET revoked_at = now() WHERE NOT $3 AND revoked_at IS NULL
+      AND (contact_id IN (SELECT id FROM contacts WHERE client_id IN (SELECT id FROM changed))
+        OR location_id IN (SELECT id FROM locations WHERE client_id IN (SELECT id FROM changed)))
+  ) SELECT * FROM changed`, [
     v.id(body.id, "id"),
     name,
     active,
@@ -2040,7 +2059,13 @@ async function upsertClient({ body }) {
  * The admin UI is responsible for showing which buildings are affected before confirming.
  */
 async function deleteClient({ params }) {
-  const row = await one("UPDATE clients SET active = false WHERE id = $1 RETURNING id, active", [
+  const row = await one(`WITH changed AS (
+    UPDATE clients SET active = false WHERE id = $1 RETURNING id, active
+  ), revoked AS (
+    UPDATE portal_grants SET revoked_at = now() WHERE revoked_at IS NULL
+      AND (contact_id IN (SELECT id FROM contacts WHERE client_id IN (SELECT id FROM changed))
+        OR location_id IN (SELECT id FROM locations WHERE client_id IN (SELECT id FROM changed)))
+  ) SELECT * FROM changed`, [
     v.id(params.id, "id"),
   ]);
   if (!row) fail(404, "unknown_client");
@@ -2072,8 +2097,16 @@ async function upsertContact({ body }) {
   }
 
   const row = await one(
-    `UPDATE contacts SET client_id = $2, name = $3, email = $4, phone = $5, active = $6 WHERE id = $1
-     RETURNING ${CONTACT_COLS}`,
+    `WITH previous AS MATERIALIZED (SELECT client_id FROM contacts WHERE id = $1), changed AS (
+       UPDATE contacts SET client_id = $2, name = $3, email = $4, phone = $5, active = $6 WHERE id = $1
+       RETURNING ${CONTACT_COLS}
+     ), revoked AS (
+       UPDATE portal_grants SET revoked_at = now() WHERE contact_id IN (SELECT id FROM changed)
+         AND (NOT $6 OR (SELECT client_id FROM previous) IS DISTINCT FROM $2::bigint) AND revoked_at IS NULL
+     ), unlinked AS (
+       UPDATE locations SET contact_id = NULL WHERE contact_id IN (SELECT id FROM changed)
+         AND client_id IS DISTINCT FROM $2::bigint
+     ) SELECT * FROM changed`,
     [v.id(body.id, "id"), clientId, name, email, phone, active],
   );
   if (!row) fail(404, "unknown_contact");
@@ -2152,11 +2185,13 @@ async function deleteInventoryItem({ params }) {
  * removed, or for a building we no longer clean, is not a state worth being able to reach.
  */
 async function createPortalGrant({ body }) {
-  const contact = await one("SELECT id FROM contacts WHERE id = $1 AND active", [
+  const contact = await one("SELECT c.id, c.client_id FROM contacts c JOIN clients cl ON cl.id = c.client_id WHERE c.id = $1 AND c.active AND cl.active", [
     v.id(body.contact_id, "contact_id"),
   ]);
   if (!contact) fail(422, "unknown_contact");
   const location = await v.activeLocation(body.location_id, "location_id");
+  const owner = await one("SELECT client_id FROM locations WHERE id = $1", [location.id]);
+  if (owner.client_id !== contact.client_id) fail(422, "contact_not_for_client", "contact_id");
 
   await query(
     "UPDATE portal_grants SET revoked_at = now() WHERE contact_id = $1 AND location_id = $2 AND revoked_at IS NULL",

@@ -505,7 +505,7 @@ export default function WorkersPage() {
           // Same half-applied-save hazard as the number above, and the same treatment: the
           // drawer STAYS OPEN, bound to `saved.id`, so a retry writes only what failed.
           reportLoginEmailFailure(cause)
-          setDraft({ ...draft, id: saved.id })
+          setDraft({ ...draft, id: saved.id, originalLoginPhone: normalisedLoginPhone })
           await load()
           return
         }

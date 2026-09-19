@@ -3015,6 +3015,47 @@ try {
     resetLoginRate();
   });
 
+  await test("TASK-338: form deactivation permanently revokes worker sessions", async () => {
+    const body = { name: "Lifecycle worker", hourly_rate_cents: 1500, active: true };
+    const { worker } = await (await asAdmin("/admin/workers", { method: "POST", body })).json();
+    await admin.query("INSERT INTO worker_sessions (token, worker_id, expires_at) VALUES ($1, $2, now() + interval '1 day')", [hashToken("lifecycle-session"), worker.id]);
+    assert.equal((await asAdmin("/admin/workers", { method: "POST", body: { ...body, id: worker.id, active: false } })).status, 200);
+    assert.equal((await asAdmin("/admin/workers", { method: "POST", body: { ...body, id: worker.id } })).status, 200);
+    assert.equal((await admin.query("SELECT 1 FROM worker_sessions WHERE worker_id = $1", [worker.id])).rowCount, 0);
+  });
+
+  await test("TASK-338: company, contact and building forms revoke links across reactivation", async () => {
+    const post = async (path, body, status = 200) => {
+      const res = await asAdmin(path, { method: "POST", body });
+      const json = await res.json();
+      assert.equal(res.status, status, JSON.stringify(json));
+      return json;
+    };
+    const { client } = await post("/admin/clients", { name: "Lifecycle company" }, 201);
+    const { contact } = await post("/admin/contacts", { name: "Lifecycle contact", client_id: client.id }, 201);
+    const { location } = await post("/admin/locations", { name: "Lifecycle building", slug: "lifecycle-building", client_id: client.id, contact_id: contact.id }, 201);
+    const pair = { contact_id: contact.id, location_id: location.id };
+    const zone = (await admin.query("INSERT INTO zones (location_id, name, verified_at) VALUES ($1, 'Lifecycle zone', now()) RETURNING id", [location.id])).rows[0];
+    for (const [path, entity] of [["/admin/contacts", contact], ["/admin/locations", location], ["/admin/clients", client]]) {
+      resetLoginRate();
+      const { token } = await post("/admin/portal-grants", pair, 201);
+      assert.equal((await call(`/portal/${token}`, { key: null })).status, 200);
+      await post(path, { ...entity, active: false });
+      assert.equal((await call(`/portal/${token}`, { key: null })).status, 404);
+      await post(path, { ...entity, active: true });
+      assert.equal((await call(`/portal/${token}`, { key: null })).status, 404, "reactivation must not resurrect a shared link");
+    }
+    const { client: other } = await post("/admin/clients", { name: "Different company" }, 201);
+    assert.equal((await admin.query("SELECT active FROM zones WHERE id = $1", [zone.id])).rows[0].active, false, "reactivating a building does not silently reactivate its retired tags");
+    const { contact: outsider } = await post("/admin/contacts", { name: "Different owner", client_id: other.id }, 201);
+    await post("/admin/portal-grants", { ...pair, contact_id: outsider.id }, 422);
+    const { token } = await post("/admin/portal-grants", pair, 201);
+    await post("/admin/contacts", { ...contact, client_id: other.id });
+    assert.equal((await call(`/portal/${token}`, { key: null })).status, 404);
+    assert.equal((await admin.query("SELECT contact_id FROM locations WHERE id = $1", [location.id])).rows[0].contact_id, null);
+    resetLoginRate();
+  });
+
   // ---- access log + PII sweep (decision-23) ---------------------------------------
   // The defect that started this: a tap failed and the server had NO evidence at all.
   // These two cases pin the fix and its safety rail — there IS a line now, and the line
@@ -5459,6 +5500,7 @@ try {
         [workerId, house],
       );
       const client = Number((await admin.query("INSERT INTO clients (name) VALUES ('Portalkunde') RETURNING id")).rows[0].id);
+      await admin.query("UPDATE locations SET client_id = $2 WHERE id = $1", [house, client]);
       const contact = Number(
         (
           await admin.query("INSERT INTO contacts (client_id, name) VALUES ($1, 'Frau Gruber') RETURNING id", [client])
