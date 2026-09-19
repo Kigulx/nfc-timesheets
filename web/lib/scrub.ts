@@ -68,6 +68,14 @@ function deepScrub(node: unknown, depth: number): void {
   }
 
   const record = node as Record<string, unknown>
+  // Sentry's browser history integration names its URLs `from` and `to`.
+  // Restrict this to navigation: other payloads use these keys for safe date ranges.
+  if (record.category === 'navigation' && record.data && typeof record.data === 'object') {
+    const navigation = record.data as Record<string, unknown>
+    for (const key of ['from', 'to']) {
+      if (typeof navigation[key] === 'string') navigation[key] = redactUrl(navigation[key])
+    }
+  }
   for (const key of Object.keys(record)) {
     if (SECRET_KEY_RE.test(key) || QUERY_KEY_RE.test(key)) {
       delete record[key]

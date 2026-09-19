@@ -602,8 +602,15 @@ check('lib/filters.ts: every well-formed value survives a round trip', () => {
     page: 3,
     sort: 'duration',
     dir: 'asc',
+    q: 'Anna + Müller & Team',
   }
   assert.deepEqual(parseFilters(filterQuery(full)), full)
+  assert.equal(parseFilters('?q=%20%20').q, null)
+  for (const state of ['active', 'inactive', 'noEmail']) {
+    const roster = { ...EMPTY_FILTERS, q: 'Müller', state }
+    assert.deepEqual(parseFilters(filterQuery(roster)), roster)
+    assert.equal(parseFilters(filterQuery({ ...roster, worker: 7 })).q, 'Müller')
+  }
   // A page number is a row id in shape, so the same rejections apply: no 0, no negative, no
   // padding. And an unknown sort column is DROPPED at the boundary, never forwarded — the
   // server would answer 400 and the director would see a broken link, not a default order.
@@ -2102,6 +2109,13 @@ check('lib/scrub.ts: a credential cannot leave, and a diagnosable code still can
   // not already say.
   assert.equal(scrubBreadcrumb({ data: { url: 'https://x/portal/TOKEN' } }), null)
   assert.equal(redactUrl('https://x/shifts?worker=117'), 'https://x/shifts')
+  const navigation = {
+    category: 'navigation',
+    data: { from: '/workers/?q=anna%40example.com', to: '/workers/?q=%2B436601234567' },
+  }
+  const safeNavigation = { category: 'navigation', data: { from: '/workers/', to: '/workers/' } }
+  assert.deepEqual(scrubBreadcrumb(structuredClone(navigation)), safeNavigation)
+  assert.deepEqual(scrubEvent({ breadcrumbs: [navigation] }), { breadcrumbs: [safeNavigation] })
 })
 
 // --- report -----------------------------------------------------------------------------
