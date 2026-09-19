@@ -62,6 +62,14 @@ check_core() {
   "$JAVA_BIN" -cp "$OUT:$JSON_JAR:$STDLIB" io.github.qwadratic.nfctimesheets.checks.CoreCheck
 }
 
+OUT_VERSION_TAP=checks/.out-version-tap
+mkdir -p "$OUT_VERSION_TAP"
+check_version_tap_gate() {
+  "$KOTLINC" -nowarn -d "$OUT_VERSION_TAP" \
+    "$CORE"/VersionTapGate.kt checks/version-tap-gate-check.kt &&
+  "$JAVA_BIN" -cp "$OUT_VERSION_TAP:$STDLIB" io.github.qwadratic.nfctimesheets.checks.VersionTapGateCheck
+}
+
 KOTLIN_HOME="$(dirname "$(dirname "$(command -v "$KOTLINC")")")"
 STDLIB="$KOTLIN_HOME/lib/kotlin-stdlib.jar"
 [ -f "$STDLIB" ] || STDLIB="$(find "$KOTLIN_HOME" -name 'kotlin-stdlib*.jar' | head -1)"
@@ -179,6 +187,7 @@ step() {          # step <name> <function>
 }
 
 step core            check_core
+step version-tap-gate check_version_tap_gate
 step known-tags      check_known_tags
 step tag-writer      check_tag_writer
 step raw-tag-io      check_raw_tag_io

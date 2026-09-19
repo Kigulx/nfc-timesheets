@@ -19,9 +19,6 @@
     <string name="signin_submit">Sign in</string>
     <string name="signin_submitting">Signing in …</string>
 
-    <!-- Mirrors the German comment: reachable before any worker session exists, matching
-         the iOS SettingsView reachability fix. -->
-    <string name="signin_operator_heading">Operator? Write or test tags without signing in as a worker.</string>
     <!-- decision-54 §4: the two buttons are no longer reachable directly — without an
          operator session the same form as above appears first, pointed at /auth/operator-*. -->
     <string name="signin_operator_gate_intro">Sign in as an operator first — with the operator code, or by SMS to the number on file.</string>
