@@ -164,7 +164,8 @@
     "geoPinned": "{name} hat jetzt Koordinaten und erscheint auf der Karte.",
     "geoNoPin": "{name}: Google hat keine brauchbare Koordinate geliefert ({status}). Das Objekt bleibt in der Liste.",
     "geoNoAddress": "{name} hat keine Adresse hinterlegt. Ohne Adresse gibt es nichts zu geokodieren.",
-    "geoFailed": "{name}: Die Abfrage ist fehlgeschlagen. Das Objekt bleibt in der Liste."
+    "geoFailed": "{name}: Die Abfrage ist fehlgeschlagen. Das Objekt bleibt in der Liste.",
+    "panelLinkOwnerReport": "Bericht für Eigentümer · Link teilen"
   },
   "payroll": {
     "heading": "Lohnabrechnung",
@@ -587,7 +588,9 @@
     "addressSearch": "Adresse in Österreich suchen",
     "addressSearchHint": "Straße und Hausnummer suchen. Ein Vorschlag füllt die Adresse oben aus; Sie können sie danach bearbeiten.",
     "addressSearchLoading": "Adressvorschläge werden geladen. Sie können die Adresse bereits manuell eingeben.",
-    "addressSearchUnavailable": "Adressvorschläge sind nicht verfügbar. Bitte Straße, Hausnummer und Postleitzahl manuell eingeben."
+    "addressSearchUnavailable": "Adressvorschläge sind nicht verfügbar. Bitte Straße, Hausnummer und Postleitzahl manuell eingeben.",
+    "shareSetContact": "Ansprechperson auswählen",
+    "shareInactiveClient": "Aktivieren Sie den Kunden, bevor Sie einen Berichtslink erstellen."
   },
   "clients": {
     "heading": "Kunden",

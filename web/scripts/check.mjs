@@ -596,6 +596,7 @@ check('lib/filters.ts: every well-formed value survives a round trip', () => {
     status: 'open',
     open: uuid,
     zones: uuid,
+    share: uuid,
     // View state, not object filters, but they round-trip through the same vocabulary and
     // MUST: `setFilters` rebuilds the whole query from FILTER_KEYS, so a parameter this file
     // did not know about would be wiped by the next filter write (TASK-18).

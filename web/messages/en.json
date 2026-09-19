@@ -164,7 +164,8 @@
     "geoPinned": "{name} now has coordinates and appears on the map.",
     "geoNoPin": "{name}: Google returned no usable coordinate ({status}). The building stays in the list.",
     "geoNoAddress": "{name} has no address on file. Without an address there is nothing to geocode.",
-    "geoFailed": "{name}: the request failed. The building stays in the list."
+    "geoFailed": "{name}: the request failed. The building stays in the list.",
+    "panelLinkOwnerReport": "Owner report · share link"
   },
   "payroll": {
     "heading": "Payroll",
@@ -587,7 +588,9 @@
     "addressSearch": "Search Austrian address",
     "addressSearchHint": "Search for a street and house number. Choose a suggestion to fill the address above; you can still edit it.",
     "addressSearchLoading": "Loading address suggestions. You can already enter the address manually.",
-    "addressSearchUnavailable": "Address suggestions are unavailable. Enter street, house number and postcode manually."
+    "addressSearchUnavailable": "Address suggestions are unavailable. Enter street, house number and postcode manually.",
+    "shareSetContact": "Choose a contact",
+    "shareInactiveClient": "Activate the company before issuing an owner report link."
   },
   "clients": {
     "heading": "Clients",

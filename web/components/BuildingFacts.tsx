@@ -273,6 +273,11 @@ export function BuildingFacts({
     href: filterHref('/locations/', { open: building.id }),
     label: t('panelLinkEdit'),
   })
+  links.push({
+    key: 'share',
+    href: filterHref('/locations/', { share: building.id }),
+    label: t('panelLinkOwnerReport'),
+  })
   if (building.client_id !== null) {
     links.push({
       key: 'client',

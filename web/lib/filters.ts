@@ -91,6 +91,7 @@ export const FILTER_KEYS = [
   'status',
   'open',
   'zones',
+  'share',
   'page',
   'sort',
   'dir',
@@ -170,6 +171,8 @@ export type AdminFilters = {
   status: FilterStatus | null
   open: string | null
   zones: string | null
+  /** Opens the selected building's owner-report controls on /locations/. */
+  share: string | null
   /** 1-based page of the shift log. `null` is page one, and writes no parameter. */
   page: number | null
   sort: ShiftSort | null
@@ -188,6 +191,7 @@ export const EMPTY_FILTERS: AdminFilters = {
   status: null,
   open: null,
   zones: null,
+  share: null,
   page: null,
   sort: null,
   dir: null,
@@ -265,6 +269,7 @@ export function parseFilters(search: string): AdminFilters {
     status: status !== null && isFilterStatus(status) ? status : null,
     open: toUuid(open),
     zones: toUuid(text('zones')),
+    share: toUuid(text('share')),
     // A 1-based page number has EXACTLY the shape of a row id — positive, unpadded, integral
     // — so it reuses the same parser rather than growing a second one that drifts from it.
     page: toRowId(text('page')),

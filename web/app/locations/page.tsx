@@ -498,9 +498,18 @@ export default function LocationsPage() {
    * payload — and the payload is capped, so the truncation note below applies to it too.
    */
   const [filters, setFilters] = useFilters()
+  const shareSummaryRef = useRef<HTMLElement>(null)
+  const sharedLocation = allLocations.find((location) => location.id === filters.share)
+  const sharedLocationId = sharedLocation?.id
+  useEffect(() => {
+    if (!sharedLocationId) return
+    shareSummaryRef.current?.focus({ preventScroll: true })
+    shareSummaryRef.current?.scrollIntoView({ block: 'center' })
+  }, [sharedLocationId])
   const seenLocationIds = new Set((snapshot?.shifts ?? []).map((shift) => shift.location_id))
   const noTagOnly = filters.state === 'noTag'
   const locations = allLocations.filter((location) => {
+    if (filters.share !== null && location.id !== filters.share) return false
     if (noTagOnly && !(location.active && !seenLocationIds.has(location.id))) return false
     if (filters.client !== null && location.client_id !== filters.client) return false
     return true
@@ -1026,7 +1035,14 @@ export default function LocationsPage() {
    */
   function shareCell(location: Location, contact: Contact | undefined) {
     const grant = grants.find((row) => row.location_id === location.id)
-    const canShare = contact?.active === true && location.active
+    const companyActive = clients.some(
+      (client) => client.id === location.client_id && client.active,
+    )
+    const canShare =
+      contact?.active === true &&
+      location.active &&
+      companyActive &&
+      contact.client_id === location.client_id
 
     if (grant !== undefined) {
       return (
@@ -1061,13 +1077,22 @@ export default function LocationsPage() {
       )
     }
 
-    if (contact === undefined) return <span className="cell-muted">{t('shareNoContact')}</span>
+    if (contact === undefined)
+      return (
+        <>
+          <span className="cell-muted">{t('shareNoContact')}</span>
+          <button type="button" className="btn btn-quiet" onClick={() => openEdit(location)}>
+            {t('shareSetContact')}
+          </button>
+        </>
+      )
     if (!contact.active) {
       return <span className="cell-muted">{t('shareContactInactive', { name: contact.name })}</span>
     }
     if (!location.active) {
       return <span className="cell-muted">{t('shareInactiveBuilding')}</span>
     }
+    if (!companyActive) return <span className="cell-muted">{t('shareInactiveClient')}</span>
     return (
       <button
         type="button"
@@ -1177,6 +1202,15 @@ export default function LocationsPage() {
           because a link narrowed it must not read as a company with three buildings. */}
       <FilterChips
         chips={[
+          filters.share === null
+            ? null
+            : {
+                key: 'share',
+                label: t('colShare'),
+                value: sharedLocation?.name ?? tFilter('unknownLocation'),
+                unknown: snapshot !== null && !sharedLocation,
+                onRemove: () => setFilters({ share: null }, 'replace'),
+              },
           noTagOnly
             ? {
                 key: 'state',
@@ -1196,7 +1230,9 @@ export default function LocationsPage() {
               },
         ].filter((chip) => chip !== null)}
       />
-      {clientUnknown || openUnknown ? (
+      {clientUnknown ||
+      openUnknown ||
+      (filters.share !== null && snapshot !== null && !sharedLocation) ? (
         <p className="notice bad">{tFilter('unknownNotice')}</p>
       ) : null}
 
@@ -1624,8 +1660,11 @@ export default function LocationsPage() {
                       <span className="shift-state-note">
                         {location.contact_name === null ? t('noContact') : location.contact_name}
                       </span>
-                      <details className="cell-disclosure">
-                        <summary>
+                      <details
+                        className="cell-disclosure"
+                        open={filters.share === location.id ? true : undefined}
+                      >
+                        <summary ref={filters.share === location.id ? shareSummaryRef : undefined}>
                           {t('colShare')}
                           <span className="visually-hidden">
                             {t('forLocation', { name: location.name })}
