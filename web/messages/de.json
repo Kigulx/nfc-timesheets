@@ -731,7 +731,7 @@
     "forShift": " der Schicht von {worker} am {date}",
     "question": "Welche Schichten brauchen eine Entscheidung?",
     "createTitle": "Schicht nachtragen",
-    "triageHeading": "Zu entscheiden",
+    "triageHeading": "Laufende und unbestätigte Schichten",
     "triageMore": "{count, plural, one {# weitere Schicht steht nur im Protokoll unten.} other {# weitere Schichten stehen nur im Protokoll unten.}}",
     "answerBlocked": "Halten die Abrechnung auf",
     "answerShown": "Angezeigt",
@@ -745,7 +745,8 @@
     "rowUnresolved": "{location} · vom 8-Stunden-Timer beendet, {date}",
     "linkedShiftMissing": "Die verlinkte Schicht ist in den geladenen Daten nicht vorhanden. Möglicherweise wurde sie inzwischen korrigiert.",
     "openWorker": "Mitarbeiterpanel öffnen",
-    "openLocation": "Objektpanel öffnen"
+    "openLocation": "Objektpanel öffnen",
+    "allStates": "Alle Zustände"
   },
   "inventory": {
     "heading": "Produkte & Geräte",

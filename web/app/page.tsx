@@ -299,7 +299,7 @@ export default function DashboardPage() {
         state: 'unres',
         trailing: <StateBadge state="unres" label={t('badgeUnresolved')} />,
         openLabel: t('unresolvedLink'),
-        onOpen: () => router.push(SHIFTS_UNRESOLVED_PATH),
+        onOpen: () => router.push(filterHref(SHIFTS_PATH, { period: 'all', shift: shift.id })),
       }),
     ),
     ...locationsWithoutShifts.map(
@@ -515,7 +515,11 @@ export default function DashboardPage() {
               },
               {
                 k: t('onSiteHeading'),
-                v: openShifts.length,
+                v: (
+                  <Link href={filterHref(SHIFTS_PATH, { period: 'all', state: 'open' })}>
+                    {openShifts.length}
+                  </Link>
+                ),
                 calm: true,
                 sub: onSiteSub,
               },

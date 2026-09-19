@@ -731,7 +731,7 @@
     "forShift": " the shift of {worker} on {date}",
     "question": "Which shifts need a decision?",
     "createTitle": "Add a shift by hand",
-    "triageHeading": "Needs a decision",
+    "triageHeading": "Running and unconfirmed shifts",
     "triageMore": "{count, plural, one {# more shift is only in the log below.} other {# more shifts are only in the log below.}}",
     "answerBlocked": "Holding up payroll",
     "answerShown": "Shown",
@@ -745,7 +745,8 @@
     "rowUnresolved": "{location} · closed by the 8-hour timer, {date}",
     "linkedShiftMissing": "The linked shift is not in the loaded data. It may have been corrected in the meantime.",
     "openWorker": "Open worker panel",
-    "openLocation": "Open building panel"
+    "openLocation": "Open building panel",
+    "allStates": "All states"
   },
   "inventory": {
     "heading": "Products & Equipment",
