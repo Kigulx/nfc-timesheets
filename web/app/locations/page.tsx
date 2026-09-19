@@ -2119,12 +2119,16 @@ export default function LocationsPage() {
                 <input
                   id={activeId}
                   type="checkbox"
+                  aria-describedby={`${activeId}-hint`}
                   checked={draft.active}
                   onChange={(event) => setDraft({ ...draft, active: event.target.checked })}
                   disabled={busy}
                 />
                 <label htmlFor={activeId}>{t('fieldActive')}</label>
               </div>
+              <p className="field-hint" id={`${activeId}-hint`}>
+                {t('activeHint')}
+              </p>
             </div>
 
             {/* NO STEP 3. The optional first zone left with admin zone creation itself
