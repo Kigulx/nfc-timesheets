@@ -384,7 +384,16 @@
     "errorLoginEmailClaimed": "Diese Adresse ist bereits einer anderen Person zugeordnet.",
     "loginEmailSaved": "Login-Adresse gespeichert: {email}.",
     "loginEmailCleared": "Login-Adresse entfernt.",
-    "loginEmailNotSaved": "Die Stammdaten wurden gespeichert. Die Login-Adresse wurde NICHT gespeichert – bitte erneut versuchen."
+    "loginEmailNotSaved": "Die Stammdaten wurden gespeichert. Die Login-Adresse wurde NICHT gespeichert – bitte erneut versuchen.",
+    "searchLabel": "Mitarbeiter suchen",
+    "searchPlaceholder": "Name, Kontakt-E-Mail oder Telefonnummer",
+    "filterAll": "Alle",
+    "filterReset": "Filter zurücksetzen",
+    "filterEmpty": "Keine Mitarbeiter passen zu diesen Filtern. Ändern Sie die Suche oder setzen Sie die Filter zurück.",
+    "resultCount": "{shown} von {total} Mitarbeitern",
+    "groupContact": "Person und Kontakt",
+    "groupLogin": "App-Zugang",
+    "groupEmployment": "Beschäftigung"
   },
   "locations": {
     "heading": "Objekte",

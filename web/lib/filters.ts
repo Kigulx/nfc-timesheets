@@ -94,6 +94,7 @@ export const FILTER_KEYS = [
   'page',
   'sort',
   'dir',
+  'q',
 ] as const
 
 export type FilterKey = (typeof FILTER_KEYS)[number]
@@ -130,7 +131,15 @@ export function isSortDir(value: string): value is SortDir {
  * something to it and ignores the rest — `/shifts/?state=noEmail` is not an error, it is a
  * shift log with no state filter.
  */
-export const FILTER_STATES = ['open', 'unresolved', 'manual', 'noEmail', 'noTag'] as const
+export const FILTER_STATES = [
+  'open',
+  'unresolved',
+  'manual',
+  'noEmail',
+  'noTag',
+  'active',
+  'inactive',
+] as const
 export type FilterState = (typeof FILTER_STATES)[number]
 
 export function isFilterState(value: string): value is FilterState {
@@ -165,6 +174,8 @@ export type AdminFilters = {
   page: number | null
   sort: ShiftSort | null
   dir: SortDir | null
+  /** Worker roster search; preserved when opening and closing a person. */
+  q: string | null
 }
 
 export const EMPTY_FILTERS: AdminFilters = {
@@ -180,6 +191,7 @@ export const EMPTY_FILTERS: AdminFilters = {
   page: null,
   sort: null,
   dir: null,
+  q: null,
 }
 
 /**
@@ -258,6 +270,7 @@ export function parseFilters(search: string): AdminFilters {
     page: toRowId(text('page')),
     sort: sort !== null && isShiftSort(sort) ? sort : null,
     dir: dir !== null && isSortDir(dir) ? dir : null,
+    q: text('q'),
   }
 }
 

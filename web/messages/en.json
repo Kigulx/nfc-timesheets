@@ -384,7 +384,16 @@
     "errorLoginEmailClaimed": "This address is already assigned to someone else.",
     "loginEmailSaved": "Login address saved: {email}.",
     "loginEmailCleared": "Login address removed.",
-    "loginEmailNotSaved": "The master data was saved. The login address was NOT saved — please try again."
+    "loginEmailNotSaved": "The master data was saved. The login address was NOT saved — please try again.",
+    "searchLabel": "Find workers",
+    "searchPlaceholder": "Name, contact email or phone number",
+    "filterAll": "All",
+    "filterReset": "Reset filters",
+    "filterEmpty": "No workers match these filters. Change your search or reset the filters.",
+    "resultCount": "{shown} of {total} workers",
+    "groupContact": "Person and contact",
+    "groupLogin": "App access",
+    "groupEmployment": "Employment"
   },
   "locations": {
     "heading": "Locations",
