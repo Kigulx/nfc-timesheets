@@ -52,7 +52,8 @@ export function ResponsiveTableLabels() {
     // Rows arrive after a fetch, and filters replace them. Re-label on any DOM change rather
     // than trying to guess which screens re-render when.
     const observer = new MutationObserver(() => label(document))
-    observer.observe(document.body, { childList: true, subtree: true })
+    // Locale switches update existing text nodes without necessarily replacing cells.
+    observer.observe(document.body, { childList: true, characterData: true, subtree: true })
     return () => observer.disconnect()
   }, [])
 
