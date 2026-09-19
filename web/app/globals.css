@@ -2843,6 +2843,8 @@ a {
   .btn-quiet,
   .skip-link,
   .callout > summary,
+  .settings-disclosure > summary,
+  .cell-disclosure > summary,
   .locale-switcher select,
   .theme-switcher select {
     min-height: 44px;

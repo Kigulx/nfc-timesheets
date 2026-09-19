@@ -807,8 +807,8 @@ export default function WorkersPage() {
       if (workerState === 'noEmail' && (!worker.active || worker.email !== null)) return false
       if (workerState === 'active' && !worker.active) return false
       if (workerState === 'inactive' && worker.active) return false
-      return [worker.name, worker.email, worker.phone].some((value) =>
-        value?.toLowerCase().includes(query),
+      return [worker.name, worker.email, worker.phone, worker.login_email, worker.phone_e164].some(
+        (value) => value?.toLowerCase().includes(query),
       )
     }) ?? null
 

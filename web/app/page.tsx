@@ -515,11 +515,14 @@ export default function DashboardPage() {
               },
               {
                 k: t('onSiteHeading'),
-                v: (
-                  <Link href={filterHref(SHIFTS_PATH, { period: 'all', state: 'open' })}>
-                    {openShifts.length}
-                  </Link>
-                ),
+                v:
+                  openShifts.length === 0 ? (
+                    0
+                  ) : (
+                    <Link href={filterHref(SHIFTS_PATH, { period: 'all', state: 'open' })}>
+                      {openShifts.length}
+                    </Link>
+                  ),
                 calm: true,
                 sub: onSiteSub,
               },

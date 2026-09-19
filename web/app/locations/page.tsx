@@ -1336,9 +1336,7 @@ export default function LocationsPage() {
 
             {zonesOfBuilding.length === 0 ? (
               <div className="list-body">
-                {/* NOT A SCOLDING. Nothing is broken and nothing is missing that stops work:
-                  this building's own tag resolves and its workers clock in. What a zone
-                  buys is the area, and per-door tag activity. */}
+                {/* New cards are set up and verified in the operator app (decisions54/69). */}
                 <EmptyState>{t('zonesEmpty')}</EmptyState>
               </div>
             ) : (
