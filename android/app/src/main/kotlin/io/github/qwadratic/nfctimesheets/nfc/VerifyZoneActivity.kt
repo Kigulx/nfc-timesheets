@@ -5,7 +5,7 @@ import android.nfc.NfcAdapter
 import android.nfc.Tag
 import android.nfc.tech.Ndef
 import android.os.Bundle
-import androidx.activity.ComponentActivity
+import io.github.qwadratic.nfctimesheets.LocalizedActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -110,7 +110,9 @@ import java.time.format.FormatStyle
  * not a second copy of either. Nothing about that touches a shift: `TagWriter` puts bytes on a
  * card, and the report and the reassignment both go out over `app.operatorApi`.
  */
-class VerifyZoneActivity : ComponentActivity() {
+class VerifyZoneActivity : LocalizedActivity() {
+    private var requestedZoneId: String? = null
+
 
     private val app: TimeSheetsApplication get() = application as TimeSheetsApplication
     private var adapter: NfcAdapter? = null
@@ -345,6 +347,7 @@ class VerifyZoneActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        requestedZoneId = intent.getStringExtra(EXTRA_ZONE_ID)
         adapter = NfcAdapter.getDefaultAdapter(this)
 
         // A 401 ON ANY OPERATOR CALL, acted on WHILE THE SCREEN IS OPEN (TASK-401). The
@@ -390,6 +393,7 @@ class VerifyZoneActivity : ComponentActivity() {
                             NfcState.DISABLED -> Text(stringResource(R.string.scan_disabled))
                             NfcState.READY -> ReadyBody()
                         }
+                        if (nfcState != NfcState.READY && simulatedZones().isNotEmpty()) ReadyBody()
 
                         Button(
                             onClick = { finish() },
@@ -1045,8 +1049,8 @@ class VerifyZoneActivity : ComponentActivity() {
                 getString(
                     R.string.verify_shifts_row,
                     row.workerName,
-                    dateTimeFormat.format(row.startTime),
-                    row.endTime?.let(timeFormat::format) ?: getString(R.string.verify_shifts_open),
+                    dateTimeFormat.withLocale(io.github.qwadratic.nfctimesheets.AppLanguage.locale(this)).format(row.startTime),
+                    row.endTime?.let { timeFormat.withLocale(io.github.qwadratic.nfctimesheets.AppLanguage.locale(this)).format(it) } ?: getString(R.string.verify_shifts_open),
                     hoursMinutes(row.durationMinutes),
                 ),
                 style = MaterialTheme.typography.bodySmall,
@@ -1457,11 +1461,14 @@ class VerifyZoneActivity : ComponentActivity() {
         bindStep = BindStep.Submitting
         lifecycleScope.launch {
             try {
-                val bound = if (isSimulatedZone(zone)) {
+                val response = if (isSimulatedZone(zone)) {
                     runBindSimulation(zone, building)
                 } else {
                     app.operatorApi.bindZone(zone.id, building.id)
                 }
+                // Mutation responses need not join the building name. Keep the selected
+                // name in the header as well as the confirmation until the next roster.
+                val bound = response.copy(locationName = response.locationName ?: building.name)
                 zones = zones.map { if (it.id == bound.id) bound else it }
                 // The DISK cache is deliberately not rewritten here: it stores the worklist
                 // envelope's exact bytes (nfc/OperatorZoneCache), and this response is one zone,
@@ -1628,6 +1635,12 @@ class VerifyZoneActivity : ComponentActivity() {
      */
     private fun show(list: List<WireOperatorZone>) {
         zones = list + simulatedZones()
+        requestedZoneId?.let { id ->
+            zones.firstOrNull { it.id == id }?.let {
+                requestedZoneId = null
+                selectZone(it)
+            }
+        }
     }
 
     private suspend fun refreshZones() {
@@ -1682,7 +1695,7 @@ class VerifyZoneActivity : ComponentActivity() {
             else -> getString(R.string.verify_no_uri, techs.joinToString(", "), uid)
         }
 
-    private fun formatted(instant: Instant): String = dateTimeFormat.format(instant)
+    private fun formatted(instant: Instant): String = dateTimeFormat.withLocale(io.github.qwadratic.nfctimesheets.AppLanguage.locale(this)).format(instant)
 
     /**
      * Minutes as h:mm. The minutes come from the SERVER, already derived in SQL from
@@ -1694,7 +1707,8 @@ class VerifyZoneActivity : ComponentActivity() {
         return "%d:%02d".format(whole / 60, whole % 60)
     }
 
-    private companion object {
+    companion object {
+        const val EXTRA_ZONE_ID = "activation_zone_id"
         val dateTimeFormat: DateTimeFormatter =
             DateTimeFormatter.ofLocalizedDateTime(FormatStyle.SHORT).withZone(ZoneId.systemDefault())
 

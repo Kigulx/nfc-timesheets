@@ -60,18 +60,14 @@ object ShiftSignals {
 
     internal const val EXTRA_HOUR = "hour"
     internal const val EXTRA_LOCATION = "location"
+    internal const val EXTRA_PENDING = "pending_confirmation"
 
     /**
-     * EVERY USER-VISIBLE STRING IN THIS FILE COMES FROM HERE (TASK-268, decision-61).
-     *
-     * The OS-supplied `Resources`, completely unmodified. There used to be an in-app
-     * language override wrapped around this Context (AppLocale.wrap); decision-61 removed
-     * it from the whole app, so the app text and the notification text now come from the
-     * one place they always agreed on — the phone's own locale. The indirection is kept
-     * because every user-visible string in this file goes through it, which is the
-     * property TASK-268 was about.
+     * Every notification string uses the same app language as the screens.
+     * Decision-71 restores the Android picker; API 33+ applies its OS-managed app
+     * locale, while older phones need the same wrapped context as their activities.
      */
-    internal fun strings(context: Context): Context = context.applicationContext
+    internal fun strings(context: Context): Context = io.github.qwadratic.nfctimesheets.AppLanguage.wrap(context.applicationContext)
 
     /**
      * Arm every out-of-app signal for [running], or tear all of them down when it is null.
@@ -96,18 +92,28 @@ object ShiftSignals {
         val text = strings(app)
         val overdue = plan.phase == ShiftSignal.Phase.OVERDUE
         val where = running.locationName ?: text.getString(R.string.unknown_location)
+        val titleKey = when {
+            running.pendingConfirmation -> R.string.notify_pending_title
+            overdue -> R.string.notify_overdue_title
+            else -> R.string.notify_running_title
+        }
+        val bodyKey = when {
+            running.pendingConfirmation -> R.string.notify_pending_body
+            overdue -> R.string.notify_overdue_body
+            else -> R.string.notify_running_body
+        }
 
         val builder = NotificationCompat.Builder(app, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_stat_shift)
             .setContentTitle(
                 text.getString(
-                    if (overdue) R.string.notify_overdue_title else R.string.notify_running_title,
+                    titleKey,
                     where,
                 ),
             )
             .setContentText(
                 text.getString(
-                    if (overdue) R.string.notify_overdue_body else R.string.notify_running_body,
+                    bodyKey,
                 ),
             )
             // State in TEXT, never colour alone — this is the accessibility rule applied to
@@ -115,7 +121,7 @@ object ShiftSignals {
             .setStyle(
                 NotificationCompat.BigTextStyle().bigText(
                     text.getString(
-                        if (overdue) R.string.notify_overdue_body else R.string.notify_running_body,
+                        bodyKey,
                     ),
                 ),
             )
@@ -194,7 +200,7 @@ object ShiftSignals {
         val where = running.locationName ?: strings(context).getString(R.string.unknown_location)
         for (hour in ShiftSignal.REMINDER_HOURS) {
             val fireAt = running.startTime.toEpochMilli() + hour * 3_600_000L
-            val intent = rungIntent(context, hour, where)
+            val intent = rungIntent(context, hour, where, running.pendingConfirmation)
             if (fireAt <= now) {
                 alarms.cancel(intent)
                 continue
@@ -222,30 +228,33 @@ object ShiftSignals {
      * Cancelling matches on requestCode and Intent.filterEquals - which ignores extras -
      * so cancelLadder can pass an empty building name and still cancel the real alarm.
      */
-    private fun rungIntent(context: Context, hour: Int, where: String): PendingIntent =
+    private fun rungIntent(context: Context, hour: Int, where: String, pendingConfirmation: Boolean = false): PendingIntent =
         PendingIntent.getBroadcast(
             context,
             hour,
             Intent(context, ShiftReminderReceiver::class.java)
                 .putExtra(EXTRA_HOUR, hour)
-                .putExtra(EXTRA_LOCATION, where),
+                .putExtra(EXTRA_LOCATION, where)
+                .putExtra(EXTRA_PENDING, pendingConfirmation),
             PendingIntent.FLAG_UPDATE_CURRENT or immutableFlag,
         )
 
     /** Posted by [ShiftReminderReceiver] when a rung fires. */
-    internal fun postReminder(context: Context, hour: Int, where: String) {
+    internal fun postReminder(context: Context, hour: Int, where: String, pendingConfirmation: Boolean = false) {
         ensureChannel(context)
         val text = strings(context)
         val autoClose = ShiftSignal.isAutoCloseWarning(hour)
         val builder = NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_stat_shift)
             .setContentTitle(
-                text.getString(
+                if (pendingConfirmation) text.getString(R.string.notify_pending_title, where) else text.getString(
                     if (autoClose) R.string.notify_autoclose_title else R.string.notify_reminder_title,
                 ),
             )
             .setContentText(
-                if (autoClose) {
+                if (pendingConfirmation) {
+                    text.getString(R.string.notify_pending_body)
+                } else if (autoClose) {
                     text.getString(R.string.notify_autoclose_body, where)
                 } else {
                     text.getString(R.string.notify_reminder_body, hour, where)

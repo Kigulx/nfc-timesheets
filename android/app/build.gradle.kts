@@ -145,6 +145,12 @@ android {
         resValues = true
     }
 
+    // The in-app language picker must work offline after a Play install too.
+    // Ship both small string tables instead of depending on a language split download.
+    bundle {
+        language { enableSplit = false }
+    }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17

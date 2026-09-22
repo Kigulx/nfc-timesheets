@@ -20,7 +20,7 @@ class ShiftReminderReceiver : BroadcastReceiver() {
         val where = intent.getStringExtra(ShiftSignals.EXTRA_LOCATION)
             ?.takeIf { it.isNotBlank() }
             ?: ShiftSignals.strings(context).getString(R.string.unknown_location)
-        ShiftSignals.postReminder(context, hour, where)
+        ShiftSignals.postReminder(context, hour, where, intent.getBooleanExtra(ShiftSignals.EXTRA_PENDING, false))
     }
 }
 
@@ -60,9 +60,12 @@ class BootReceiver : BroadcastReceiver() {
                     open?.let {
                         RunningShift(
                             locationId = it.locationId,
-                            locationName = app.store.locationNames()[it.locationId],
+                            locationName = app.store.locationNames()[
+                                io.github.qwadratic.nfctimesheets.core.Zones.buildingIdOf(it.locationId, app.store.zones())
+                            ],
                             startTime = it.startTime,
                             serverAutoClosed = it.needsResolution,
+                            pendingConfirmation = it.openSyncedAt == null,
                         )
                     },
                 )

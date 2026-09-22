@@ -2,7 +2,7 @@ package io.github.qwadratic.nfctimesheets
 
 import android.content.Intent
 import android.os.Bundle
-import androidx.activity.ComponentActivity
+import io.github.qwadratic.nfctimesheets.LocalizedActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.lifecycle.ViewModelProvider
@@ -19,7 +19,19 @@ import io.github.qwadratic.nfctimesheets.ui.TimeSheetViewModel
  * All three land in `handle`, which parses with the SAME TagLink and posts to the SAME
  * TapInbox, so a physical tap delivered twice collapses into one clock-in.
  */
-class MainActivity : ComponentActivity() {
+class MainActivity : LocalizedActivity() {
+
+    private val workerReader by lazy {
+        io.github.qwadratic.nfctimesheets.nfc.WorkerTagReader(this) { id ->
+            if (id != null) model.acceptTap(id)
+            else android.widget.Toast.makeText(this, R.string.worker_tag_unreadable, android.widget.Toast.LENGTH_LONG).show()
+        }
+    }
+
+    override fun onPause() {
+        workerReader.setEnabled(false)
+        super.onPause()
+    }
 
     private val app: TimeSheetsApplication get() = application as TimeSheetsApplication
 
@@ -53,6 +65,7 @@ class MainActivity : ComponentActivity() {
         setContent {
             TimeSheetApp(
                 model = model,
+                workerReader = workerReader::setEnabled,
                 nfcReadiness = { NfcReadiness.of(this) },
                 openIntent = { startActivity(it) },
             )

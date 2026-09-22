@@ -15,6 +15,7 @@ import io.github.qwadratic.nfctimesheets.core.ShiftSignal
 import io.github.qwadratic.nfctimesheets.core.TapInbox
 import io.github.qwadratic.nfctimesheets.core.WireMaterialRequest
 import io.github.qwadratic.nfctimesheets.core.WireShift
+import io.github.qwadratic.nfctimesheets.core.WireZone
 import io.github.qwadratic.nfctimesheets.core.WireWorker
 import io.github.qwadratic.nfctimesheets.core.Zones
 import io.github.qwadratic.nfctimesheets.data.FlagCache
@@ -26,6 +27,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.time.Instant
@@ -51,6 +53,7 @@ sealed interface SessionState {
 data class LogState(
     val shifts: List<LocalShift> = emptyList(),
     val locationNames: Map<String, String> = emptyMap(),
+    val zones: List<WireZone> = emptyList(),
     val unresolved: List<WireShift> = emptyList(),
     val busy: Boolean = false,
     /**
@@ -603,6 +606,7 @@ class TimeSheetViewModel(private val app: TimeSheetsApplication) : ViewModel() {
             _log.value = _log.value.copy(
                 shifts = io { app.store.all() },
                 locationNames = io { app.store.locationNames() },
+                zones = io { app.store.zones() },
                 unresolved = unresolved,
                 pending = pending.first,
                 pushArmed = pending.second,
@@ -632,6 +636,7 @@ class TimeSheetViewModel(private val app: TimeSheetsApplication) : ViewModel() {
                 // decision-10: the server flagged it and no human has fixed it. The screen
                 // and the notification must then stop showing a running clock.
                 serverAutoClosed = it.needsResolution,
+                pendingConfirmation = it.openSyncedAt == null,
             )
         }
         if (running != null) ShiftSignals.markClockedIn(app)
@@ -642,7 +647,20 @@ class TimeSheetViewModel(private val app: TimeSheetsApplication) : ViewModel() {
      * Re-state the world when the app comes back to the foreground: a notification the
      * worker swiped away comes back, and a permission flipped in Settings is noticed.
      */
-    fun onForeground() = armSignals()
+    fun onForeground() {
+        armSignals()
+        // An operator may just have activated a new zone on this same phone.
+        // Refresh read-only names/serials without waiting for the next worker tap.
+        viewModelScope.launch {
+            withContext(Dispatchers.IO) { app.sync.refreshRoster() }
+            val names = io { app.store.locationNames() }
+            val zones = io { app.store.zones() }
+            // A tap may publish a shift while the roster reads suspend. Merge only
+            // the roster into the latest state, never restore a pre-tap snapshot.
+            _log.update { it.copy(locationNames = names, zones = zones) }
+            armSignals()
+        }
+    }
 
     /** The prompt has been shown once; never ask again from inside the app. */
     fun markNotificationsAsked() = ShiftSignals.markAsked(app)
@@ -869,7 +887,9 @@ class TimeSheetViewModel(private val app: TimeSheetsApplication) : ViewModel() {
         }
     }
 
-    fun siteName(locationId: String): String? = _log.value.locationNames[locationId]
+    fun siteName(locationId: String): String? = _log.value.let { state ->
+        state.locationNames[Zones.buildingIdOf(locationId, state.zones)]
+    }
 
     // ---- material requests ---------------------------------------------------------
     //

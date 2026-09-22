@@ -58,6 +58,7 @@ class Api(
     private val cookies: CookieJar,
     private val onSessionRejected: () -> Unit,
     private val pending: () -> PendingWork.Summary = { PendingWork.NOTHING },
+    private val base: String = "https://${BuildConfig.API_HOST}",
 ) {
     /**
      * THE API HOST, NEVER THE TAG HOST (decision-40).
@@ -69,7 +70,7 @@ class Api(
      *
      * Nothing physical points here, so this host may be renamed, moved or replaced.
      */
-    private val base = "https://${BuildConfig.API_HOST}"
+
 
     // ---- endpoints ---------------------------------------------------------------
 

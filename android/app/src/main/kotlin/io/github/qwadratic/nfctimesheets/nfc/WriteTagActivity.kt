@@ -3,7 +3,7 @@ package io.github.qwadratic.nfctimesheets.nfc
 import android.nfc.NfcAdapter
 import android.nfc.Tag
 import android.os.Bundle
-import androidx.activity.ComponentActivity
+import io.github.qwadratic.nfctimesheets.LocalizedActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -88,7 +88,7 @@ import java.util.UUID
  * constructs this class, this activity's reader mode is foreground-only, and the operator
  * session is read from disk — no network call, nothing to be slow, nothing to fail.
  */
-class WriteTagActivity : ComponentActivity() {
+class WriteTagActivity : LocalizedActivity() {
 
     private val app: TimeSheetsApplication get() = application as TimeSheetsApplication
     private var adapter: NfcAdapter? = null
@@ -195,7 +195,7 @@ class WriteTagActivity : ComponentActivity() {
         data object Submitting : ZoneStep
 
         /** `building` null = the operator skipped it and the zone is unbound. */
-        data class Done(val zoneName: String, val building: String?) : ZoneStep
+        data class Done(val id: String, val zoneName: String, val building: String?) : ZoneStep
 
         /** The zone was not created. The card is still fine; this is retryable. */
         data class Failed(val code: String) : ZoneStep
@@ -249,6 +249,8 @@ class WriteTagActivity : ComponentActivity() {
                             NfcState.DISABLED -> Text(stringResource(R.string.scan_disabled))
                             NfcState.READY -> WriteBody()
                         }
+                        // Emulators have no NFC hardware; only debug source sets expose simulations.
+                        if (nfcState != NfcState.READY && writeSimulations().isNotEmpty()) WriteBody()
 
                         Button(
                             onClick = { finish() },
@@ -373,15 +375,21 @@ class WriteTagActivity : ComponentActivity() {
             ZoneStep.Loading -> Text(stringResource(R.string.write_zone_loading))
             ZoneStep.Submitting -> Text(stringResource(R.string.write_zone_submitting))
 
-            is ZoneStep.Done -> Text(
-                text = if (step.building == null) {
-                    getString(R.string.write_zone_done_unbound, step.zoneName)
-                } else {
-                    getString(R.string.write_zone_done_bound, step.zoneName, step.building)
-                },
-                style = MaterialTheme.typography.bodyMedium,
-                modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
-            )
+            is ZoneStep.Done -> Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text(
+                    text = if (step.building == null) getString(R.string.write_zone_done_unbound, step.zoneName)
+                    else getString(R.string.write_zone_done_bound, step.zoneName, step.building),
+                    modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
+                )
+                if (step.building != null) Text(stringResource(R.string.write_activation_hint))
+                Button(onClick = {
+                    startActivity(android.content.Intent(this@WriteTagActivity, VerifyZoneActivity::class.java)
+                        .putExtra(VerifyZoneActivity.EXTRA_ZONE_ID, step.id))
+                    finish()
+                }, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) {
+                    Text(stringResource(if (step.building == null) R.string.write_bind_next else R.string.write_activate))
+                }
+            }
 
             is ZoneStep.Failed -> {
                 Text(
@@ -610,7 +618,7 @@ class WriteTagActivity : ComponentActivity() {
                 } else {
                     app.operatorApi.resolveZone(tagId, name, building?.id)
                 }
-                ZoneStep.Done(zone.name, if (zone.locationId == null) null else building?.name)
+                ZoneStep.Done(zone.id, zone.name, if (zone.locationId == null) null else building?.name)
             } catch (e: ApiFailure) {
                 ZoneStep.Failed(e.code)
             } catch (_: Exception) {

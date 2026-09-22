@@ -170,6 +170,15 @@ check_operator_401() {
   "$JAVA_BIN" -cp "$OUT_NET:$JSON_JAR:$STDLIB:$COROUTINES" io.github.qwadratic.nfctimesheets.checks.Operator401Check
 }
 
+# Foreground reader lifecycle, using the shipping reader and fake Android radio callbacks.
+check_worker_reader() {
+  mkdir -p checks/.out-worker-reader
+  "$KOTLINC" -nowarn -d checks/.out-worker-reader \
+    "$CORE"/TagLink.kt "$NFC"/WorkerTagReader.kt \
+    checks/worker-reader/*.kt checks/worker-reader-check.kt &&
+  "$JAVA_BIN" -cp "checks/.out-worker-reader:$STDLIB" io.github.qwadratic.nfctimesheets.checks.Worker_reader_checkKt
+}
+
 # ---- run them all, red or not ------------------------------------------------------
 set +e
 failed=0
@@ -195,6 +204,7 @@ step manifest        check_manifest
 step verify-no-shift check_verify_no_shift
 step reader-armed    check_reader_armed
 step operator-401    check_operator_401
+step worker-reader   check_worker_reader
 
 echo
 echo "=== summary ==="

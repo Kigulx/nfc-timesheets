@@ -4,6 +4,50 @@ Native Kotlin + Jetpack Compose. Reads the **same NFC tags already on the walls*
 speaks the **same API** as the iOS app and the web admin. No server change was needed and
 none was made.
 
+## Worker flow and local verification (TASK-339)
+
+Workers have three destinations: Shift, Materials and More. More contains hours/history,
+the German/English/system language picker, operator entry and logout confirmation.
+Language selection also applies to dates and notifications (decision-71). Both translations
+are bundled for Google Play installs; switching languages never requires a download.
+
+While a signed-in worker screen is resumed, `WorkerTagReader` owns foreground NFC reader
+mode. It feeds the same tap inbox as a manual scan, including raw-page recovery and cached
+serial lookup. Leaving for operator tools, signing out or backgrounding stops that reader;
+callbacks from a previous reader session are discarded. This addresses the URL prompt
+inside the app. Outside the app, Android's own NFC/App Link handling still applies.
+
+Writing a card is not activation. After reporting and naming a zone, the writer links
+directly to that zone's existing bind/verification screen. An operator must still scan the
+matching card before the server accepts worker shifts. Operator actions never create shifts.
+
+For repeatable emulator journeys against the real API, use an isolated **local** PostgreSQL
+database and `demo/android-worker-audit.mjs` from the repository root. Set `DATABASE_URL`
+explicitly to a loopback database URL; the fixture rejects non-loopback database hosts,
+creates its own schema, and prints its name. It seeds worker code `33901`, operator code
+`33902`, a building and a verified zone. Codes are single-use and expire after four hours.
+The fixture writes IDs to ignored `android/captures/worker-experience/fixture.json` and drops
+its schema on SIGINT/SIGTERM. It does not configure production data or external messaging.
+
+Run `adb reverse tcp:8082 tcp:8082`. In a **debug** install, place a private preference file
+`shared_prefs/debug_api.xml` containing
+`<map><string name="base">http://127.0.0.1:8082</string></map>` via `adb shell run-as` and
+restart the app. Only this exact loopback URL is accepted; other values use the normal
+HTTPS API. Remove that preference and restart to restore the normal API. Release builds
+always use the branded HTTPS API and cannot read this override. Never reuse production
+credentials in the fixture.
+
+The debug writer and verification screens expose the existing simulated-card hooks even
+on an emulator without NFC. Use a simulated chip write followed by real report/resolve/
+verify requests to exercise the entire lifecycle. These controls are absent from release
+builds. `checks/run.sh` also runs the shipping foreground reader against an isolated fake
+radio to exercise enable/disable, raw recovery and stale callback rejection. Neither an
+emulator nor a fake radio proves physical card reading, RF timing or Google Play App Links;
+those require a physical phone with the signed distribution build.
+
+The September 22 verification and outstanding check limitations are recorded in
+[`docs/android-worker-verification.md`](../docs/android-worker-verification.md).
+
     android/
       branding.properties     the ONE place an operator identity is typed
       keystore.properties     NOT COMMITTED — the operator supplies it (see .example)
