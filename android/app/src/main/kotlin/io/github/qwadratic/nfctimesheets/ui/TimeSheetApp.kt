@@ -1,5 +1,6 @@
 package io.github.qwadratic.nfctimesheets.ui
 
+import io.github.qwadratic.nfctimesheets.AppLanguage
 import android.Manifest
 import android.content.Intent
 import android.os.Build
@@ -54,10 +55,10 @@ import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -128,6 +129,7 @@ import java.util.Locale
 @Composable
 fun TimeSheetApp(
     model: TimeSheetViewModel,
+    workerReader: (Boolean) -> Unit,
     nfcReadiness: () -> NfcReadiness,
     openIntent: (Intent) -> Unit,
 ) {
@@ -140,7 +142,7 @@ fun TimeSheetApp(
                     Text(stringResource(R.string.loading_session))
                 }
                 is SessionState.SignedOut -> SignInScreen(model, state.reasonKey, openIntent)
-                is SessionState.SignedIn -> SignedInScaffold(model, nfcReadiness, openIntent)
+                is SessionState.SignedIn -> SignedInScaffold(model, nfcReadiness, openIntent, workerReader)
             }
         }
     }
@@ -215,6 +217,8 @@ private fun SignInScreen(model: TimeSheetViewModel, reasonKey: String?, openInte
                 modifier = Modifier.semantics { heading() },
             )
         }
+
+        LanguagePicker()
 
         // AC4 (TASK-262): a genuine session expiry used to bounce here with an empty code
         // field and no explanation -- the field's own refusal line only renders after a
@@ -774,28 +778,41 @@ private fun SignedInScaffold(
     model: TimeSheetViewModel,
     nfcReadiness: () -> NfcReadiness,
     openIntent: (Intent) -> Unit,
+    workerReader: (Boolean) -> Unit,
 ) {
+    var selectedName by rememberSaveable { mutableStateOf(ShiftSignal.Tab.LOG.name) }
+    val tabState = rememberSaveableStateHolder()
+    var showOperator by rememberSaveable { mutableStateOf(false) }
+    if (showOperator) {
+        OperatorScreen(model, openIntent) { showOperator = false }
+        return
+    }
+    LifecycleResumeEffect(Unit) {
+        workerReader(true)
+        onPauseOrDispose { workerReader(false) }
+    }
     val log by model.log.collectAsStateWithLifecycle()
     val materials by model.materials.collectAsStateWithLifecycle()
     val arrivals = materials.unseenArrivals.size
 
-    // THE LOCK. While a shift runs the navigation bar is shorter: Verlauf goes, because
-    // nothing in it is time-critical. Material and Einstellungen NEVER go, because a
-    // worker standing in a building needs to ask for supplies and a handed-over phone must
-    // be signable-out (decision-26). The resolver is not a tab: it is a card on the log
-    // screen, shown in every state (decision-10).
-    //
-    // This is WORK DISCIPLINE and not a security boundary. The rule lives in the pure
-    // ShiftSignal.visibleTabs, which core-check asserts can never return a set without
-    // MATERIALS and SETTINGS in it.
-    val tabs = ShiftSignal.visibleTabs(shiftRunning = log.open != null)
+    // Three stable destinations. Local history lives under More and remains hidden
+    // while a shift runs; materials and account actions stay reachable.
+    val tabs = ShiftSignal.visibleTabs(shiftRunning = log.open != null).filterNot { it == ShiftSignal.Tab.HISTORY }
 
     // Saved by NAME, not by index: the index of a tab changes when the lock removes one,
     // and a saved index would silently reopen a different screen after a rotation.
-    var selectedName by rememberSaveable { mutableStateOf(ShiftSignal.Tab.LOG.name) }
     // The worker was on Verlauf when the shift started. Falling back to the log screen is
     // the whole point - they are not left staring at a tab that no longer exists.
     val current = tabs.firstOrNull { it.name == selectedName } ?: ShiftSignal.Tab.LOG
+
+    // Consume NFC on every worker destination, then show the result on the shift screen.
+    val pendingTap by model.pendingTap.collectAsStateWithLifecycle()
+    LaunchedEffect(pendingTap) {
+        if (pendingTap != null) {
+            selectedName = ShiftSignal.Tab.LOG.name
+            model.consumePendingTap()
+        }
+    }
 
     // Coming back from the background: repost a notification the worker swiped away and
     // notice a permission that was flipped in Settings while the app was not running.
@@ -805,6 +822,7 @@ private fun SignedInScaffold(
     }
 
     Scaffold(
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
         bottomBar = {
             NavigationBar {
                 tabs.forEach { tab ->
@@ -812,6 +830,7 @@ private fun SignedInScaffold(
                         selected = current == tab,
                         onClick = { selectedName = tab.name },
                         icon = {
+                            WorkerNavIcon(tab)
                             // The count of things sitting in the warehouse that nobody has
                             // told this worker about. A NUMBER and not a dot, and spoken
                             // rather than only coloured.
@@ -836,21 +855,23 @@ private fun SignedInScaffold(
         Column(Modifier.padding(padding)) {
             // Explicit and exhaustive, no `else`: a fifth tab added to ShiftSignal.Tab
             // fails to compile here rather than silently rendering Einstellungen.
+            tabState.SaveableStateProvider(current.name) {
             when (current) {
                 ShiftSignal.Tab.LOG -> LogScreen(model, nfcReadiness, openIntent)
                 ShiftSignal.Tab.MATERIALS -> MaterialScreen(model)
                 ShiftSignal.Tab.HISTORY -> HistoryScreen(model)
-                ShiftSignal.Tab.SETTINGS -> SettingsScreen(model, openIntent)
+                ShiftSignal.Tab.SETTINGS -> SettingsScreen(model, openIntent) { showOperator = true }
+            }
             }
         }
     }
 }
 
 private fun tabLabel(tab: ShiftSignal.Tab): Int = when (tab) {
-    ShiftSignal.Tab.LOG -> R.string.tab_log
+    ShiftSignal.Tab.LOG -> R.string.nav_shift
     ShiftSignal.Tab.MATERIALS -> R.string.tab_material
     ShiftSignal.Tab.HISTORY -> R.string.tab_history
-    ShiftSignal.Tab.SETTINGS -> R.string.tab_settings
+    ShiftSignal.Tab.SETTINGS -> R.string.nav_more
 }
 
 @Composable
@@ -860,7 +881,6 @@ private fun LogScreen(
     openIntent: (Intent) -> Unit,
 ) {
     val log by model.log.collectAsStateWithLifecycle()
-    val pendingTap by model.pendingTap.collectAsStateWithLifecycle()
     // decision-57 §3. Default FALSE, and FALSE is today's screen exactly.
     val funTheme by model.funShiftScreen.collectAsStateWithLifecycle()
     var showResolver by remember { mutableStateOf(false) }
@@ -868,15 +888,6 @@ private fun LogScreen(
     // the call: neither action may be a single accidental tap (decision-56 §4).
     var showManualStart by remember { mutableStateOf(false) }
     var showManualStop by remember { mutableStateOf(false) }
-
-    // THE TAP CONSUMER, and the reason TapInbox exists. This effect is inside the log
-    // screen, which is only composed once the session has resolved — so a tap that
-    // LAUNCHED the app waits in the inbox and is drained here, and a tap that arrives
-    // while the app is open re-runs the effect. One tap, handled exactly once, in both
-    // orderings. Pinned by android/checks/core-check.kt.
-    LaunchedEffect(pendingTap) {
-        if (pendingTap != null) model.consumePendingTap()
-    }
 
     // Checked on every resume, not once at onboarding: a worker can revoke the tag-intent
     // permission from a notification at any time and every tap then silently does nothing.
@@ -907,7 +918,9 @@ private fun LogScreen(
                 locationName = model.siteName(open.locationId),
                 startTime = open.startTime,
                 serverAutoClosed = open.needsResolution,
+                pendingConfirmation = open.openSyncedAt == null,
             ),
+            syncError = open.syncError,
             unresolved = log.unresolved,
             onResolve = { showResolver = true },
             notice = log.switchNotice,
@@ -1005,12 +1018,6 @@ private fun LogScreen(
             }
         }
 
-        item { SectionHeading(R.string.log_recent_section) }
-        if (log.recent.isEmpty()) {
-            item { Text(stringResource(R.string.log_recent_empty), color = MaterialTheme.colorScheme.onSurfaceVariant) }
-        }
-        items(log.recent, key = { it.clientUuid }) { ShiftRow(it, model.siteName(it.locationId)) }
-
         item {
             // Clocking in happens by holding the phone to the tag: Android reads it and
             // opens the App Link. This used to say there was no in-app path to a shift and
@@ -1053,6 +1060,12 @@ private fun LogScreen(
                     .heightIn(min = 48.dp),
             ) { Text(stringResource(R.string.manual_start_open)) }
         }
+
+        item { SectionHeading(R.string.log_recent_section) }
+        if (log.recent.isEmpty()) {
+            item { Text(stringResource(R.string.log_recent_empty), color = MaterialTheme.colorScheme.onSurfaceVariant) }
+        }
+        items(log.recent, key = { it.clientUuid }) { ShiftRow(it, model.siteName(it.locationId)) }
 
         item {
             // decision-23: there is no push in this system. Promising a notification to
@@ -1101,6 +1114,7 @@ private fun LogScreen(
 private fun ShiftRunningScreen(
     model: TimeSheetViewModel,
     running: RunningShift,
+    syncError: String?,
     unresolved: List<WireShift>,
     onResolve: () -> Unit,
     notice: Pair<String?, String?>?,
@@ -1202,7 +1216,11 @@ private fun ShiftRunningScreen(
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Text(
-            stringResource(if (overdue) R.string.shift_overdue_heading else R.string.shift_running_heading),
+            stringResource(when {
+                running.pendingConfirmation -> R.string.shift_pending_heading
+                overdue -> R.string.shift_overdue_heading
+                else -> R.string.shift_running_heading
+            }),
             style = MaterialTheme.typography.titleMedium,
             color = onContainer,
             modifier = Modifier.semantics { heading() },
@@ -1219,6 +1237,19 @@ private fun ShiftRunningScreen(
             color = onContainer,
         )
 
+        if (running.pendingConfirmation || syncError != null) {
+            Card(Modifier.fillMaxWidth()) {
+                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    if (running.pendingConfirmation) Text(stringResource(R.string.shift_pending_body))
+                    syncError?.let {
+                        Text(stringResource(stringIdFor(it)), color = MaterialTheme.colorScheme.error,
+                            modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite })
+                    }
+                    TextButton(onClick = model::refresh) { Text(stringResource(R.string.log_refresh)) }
+                }
+            }
+        }
+
         // The dominant element, and the whole reason this screen exists.
         //
         // The digits are `clearAndSetSemantics {}`: a per-second change under TalkBack is
@@ -1226,7 +1257,10 @@ private fun ShiftRunningScreen(
         // would be worst. The ONE spoken element is the card, whose label is recomputed
         // from (hours, minutes) and therefore changes once a minute. Changing a label is
         // not an announcement, so nothing is interrupted.
-        val spoken = if (overdue) {
+        val spoken = if (running.pendingConfirmation) {
+            stringResource(R.string.a11y_shift_pending, hours, minutes,
+                running.locationName ?: stringResource(R.string.unknown_location))
+        } else if (overdue) {
             stringResource(R.string.a11y_shift_overdue, running.locationName ?: stringResource(R.string.unknown_location))
         } else {
             stringResource(
@@ -1255,7 +1289,11 @@ private fun ShiftRunningScreen(
                     modifier = Modifier.clearAndSetSemantics { },
                 )
                 Text(
-                    stringResource(if (overdue) R.string.shift_overdue_body else R.string.shift_running_label),
+                    stringResource(when {
+                        running.pendingConfirmation -> R.string.shift_pending_label
+                        overdue -> R.string.shift_overdue_body
+                        else -> R.string.shift_running_label
+                    }),
                     style = MaterialTheme.typography.titleSmall,
                     textAlign = TextAlign.Center,
                 )
@@ -2255,7 +2293,7 @@ private fun HistoryScreen(model: TimeSheetViewModel) {
     val log by model.log.collectAsStateWithLifecycle()
     val completed = log.shifts.filter { !it.isOpen }
     val weekStart = LocalDate.now()
-        .with(WeekFields.of(Locale.getDefault()).dayOfWeek(), 1)
+        .with(WeekFields.of(AppLanguage.locale(LocalContext.current)).dayOfWeek(), 1)
         .atStartOfDay(ZoneId.systemDefault())
         .toInstant()
 
@@ -2295,35 +2333,23 @@ private fun HistoryScreen(model: TimeSheetViewModel) {
 }
 
 @Composable
-private fun SettingsScreen(model: TimeSheetViewModel, openIntent: (Intent) -> Unit) {
+private fun SettingsScreen(model: TimeSheetViewModel, openIntent: (Intent) -> Unit, onOperator: () -> Unit) {
     val worker = (model.session.collectAsStateWithLifecycle().value as? SessionState.SignedIn)?.worker
 
-    // „Meine Stunden“ (TASK-189) as a plain composable toggle, NOT a bottom-nav tab and NOT
-    // a new Activity: ShiftSignal.Tab, visibleTabs and SignedInScaffold's NavigationBar are
-    // all untouched. Reached only by a worker already signed in who taps Einstellungen —
-    // one of the two tabs ShiftSignal.visibleTabs guarantees stays visible in every shift
-    // state — and then this button. None of that fires during, before or as a side effect
-    // of a tag tap.
     var showMyHours by rememberSaveable { mutableStateOf(false) }
     if (showMyHours) {
         MyHoursScreen(model, onBack = { showMyHours = false })
         return
     }
 
-    // THE OPERATOR DOOR FOR A WORKER WHO IS ALREADY SIGNED IN (the 2026-08-29 audit's B3,
-    // mirroring iOS's existing "Write or test tags" row in SettingsView). Before this, the
-    // only in-app operator entry for a signed-in worker was an item on the idle log list,
-    // itself gated on the phone having an NFC chip — so on a phone with NFC off the answer
-    // was "sign out first", which throws away the session and, with it, the ability to get
-    // back in without a fresh enrolment code from the office. Signing out to write a tag
-    // is not a workflow; it is a dead end with a cost.
-    //
-    // It opens exactly the same [OperatorScreen] the sign-in screen's row opens, so there
-    // is one operator gate in this app and it is still a gate: reaching this row proves
-    // somebody is a WORKER, and proves nothing at all about being an operator.
-    var showOperator by rememberSaveable { mutableStateOf(false) }
-    if (showOperator) {
-        OperatorScreen(model, openIntent) { showOperator = false }
+    val log by model.log.collectAsStateWithLifecycle()
+    var showHistory by rememberSaveable { mutableStateOf(false) }
+    if (showHistory && log.open == null) {
+        BackHandler { showHistory = false }
+        Column(Modifier.windowInsetsPadding(WindowInsets.safeDrawing)) {
+            TextButton(onClick = { showHistory = false }) { Text(stringResource(R.string.back)) }
+            HistoryScreen(model)
+        }
         return
     }
 
@@ -2340,42 +2366,38 @@ private fun SettingsScreen(model: TimeSheetViewModel, openIntent: (Intent) -> Un
             style = MaterialTheme.typography.headlineSmall,
             modifier = Modifier.semantics { heading() },
         )
-        // "Who are you" is not a setting a worker gets to choose (decision-22). It is the
-        // server's answer, shown read-only.
-        Text("${stringResource(R.string.settings_signed_in_as)}: ${worker?.name.orEmpty()}")
-        Text(
-            stringResource(R.string.settings_admin_note),
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        OutlinedButton(
-            onClick = model::signOut,
-            modifier = Modifier
-                .fillMaxWidth()
-                .heightIn(min = 48.dp),
-        ) { Text(stringResource(R.string.sign_out)) }
-        Text(
-            stringResource(R.string.settings_sign_out_note),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-
-        // „Meine Stunden“ entry point: same „about you“ grouping as signed-in-as/sign-out
-        // above, before the settings sections below it. Read-only — no rate, no total, no
-        // control that writes a shift (decision-19/47).
-        HorizontalDivider()
-        OutlinedButton(
-            onClick = { showMyHours = true },
-            modifier = Modifier
-                .fillMaxWidth()
-                .heightIn(min = 48.dp),
-        ) { Text(stringResource(R.string.myhours_open)) }
+        Text(worker?.name.orEmpty(), style = MaterialTheme.typography.titleLarge)
+        Card(Modifier.fillMaxWidth()) {
+            Column(Modifier.padding(horizontal = 16.dp)) {
+                RowLink(stringResource(R.string.myhours_open)) { showMyHours = true }
+                if (log.open == null) {
+                    HorizontalDivider()
+                    RowLink(stringResource(R.string.tab_history)) { showHistory = true }
+                }
+            }
+        }
+        LanguagePicker()
+        Card(Modifier.fillMaxWidth()) {
+            Column(Modifier.padding(horizontal = 16.dp)) {
+                RowLink(stringResource(R.string.settings_operator_open), onOperator)
+            }
+        }
 
         HorizontalDivider()
-        RowLink(stringResource(R.string.settings_operator_open)) { showOperator = true }
+        RevealSection(label = { Text(stringResource(R.string.settings_push_title)) }) { PushSection(model) }
 
         HorizontalDivider()
-        PushSection(model)
+        var confirmSignOut by remember { mutableStateOf(false) }
+        TextButton(onClick = { confirmSignOut = true }) { Text(stringResource(R.string.sign_out)) }
+        if (confirmSignOut) {
+            androidx.compose.material3.AlertDialog(
+                onDismissRequest = { confirmSignOut = false },
+                title = { Text(stringResource(R.string.sign_out)) },
+                text = { Text(stringResource(R.string.settings_sign_out_note)) },
+                confirmButton = { TextButton(onClick = { confirmSignOut = false; model.signOut() }) { Text(stringResource(R.string.sign_out)) } },
+                dismissButton = { TextButton(onClick = { confirmSignOut = false }) { Text(stringResource(R.string.manual_cancel)) } },
+            )
+        }
 
         // TASK-253: a plain version line, visible without any dev tooling -- the whole
         // point is turning "which build is this phone running" from a log dive into a
@@ -2618,13 +2640,17 @@ private val dateFormat: DateTimeFormatter =
 private val timeFormat: DateTimeFormatter =
     DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT).withZone(ZoneId.systemDefault())
 
-private fun dateTime(instant: Instant): String = dateTimeFormat.format(instant)
+@Composable
+private fun dateTime(instant: Instant): String = dateTimeFormat.withLocale(AppLanguage.locale(LocalContext.current)).format(instant)
 
-private fun dateOnly(instant: Instant): String = dateFormat.format(instant)
+@Composable
+private fun dateOnly(instant: Instant): String = dateFormat.withLocale(AppLanguage.locale(LocalContext.current)).format(instant)
 
-private fun timeOfDay(instant: Instant): String = timeFormat.format(instant)
+@Composable
+private fun timeOfDay(instant: Instant): String = timeFormat.withLocale(AppLanguage.locale(LocalContext.current)).format(instant)
 
-private fun hours(seconds: Long): String = String.format(Locale.getDefault(), "%.1f", seconds / 3600.0)
+@Composable
+private fun hours(seconds: Long): String = String.format(AppLanguage.locale(LocalContext.current), "%.1f", seconds / 3600.0)
 
 // ---- „Meine Stunden“ (TASK-189) — Vienna-fixed formatting, deliberately NOT reusing
 // dateFormat/timeFormat above. Those use ZoneId.systemDefault(), which is only correct on
@@ -2643,6 +2669,8 @@ private val viennaDateFormat: DateTimeFormatter =
 private val viennaTimeFormat: DateTimeFormatter =
     DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT).withZone(viennaZone)
 
-private fun viennaDate(instant: Instant): String = viennaDateFormat.format(instant)
+@Composable
+private fun viennaDate(instant: Instant): String = viennaDateFormat.withLocale(AppLanguage.locale(LocalContext.current)).format(instant)
 
-private fun viennaTime(instant: Instant): String = viennaTimeFormat.format(instant)
+@Composable
+private fun viennaTime(instant: Instant): String = viennaTimeFormat.withLocale(AppLanguage.locale(LocalContext.current)).format(instant)

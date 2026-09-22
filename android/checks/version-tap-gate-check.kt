@@ -14,7 +14,7 @@ fun main() {
     check(app.contains("VersionTapGate.advance(versionTapCount)")) {
         "signed-out version row does not drive the five-tap gate"
     }
-    check(app.contains("RowLink(stringResource(R.string.settings_operator_open))")) {
+    check(app.contains("RowLink(stringResource(R.string.settings_operator_open), onOperator)")) {
         "signed-in Settings operator row was removed"
     }
 

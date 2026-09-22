@@ -1,13 +1,11 @@
 package io.github.qwadratic.nfctimesheets.nfc
 
-import android.app.Activity
 import android.content.Intent
 import android.net.Uri
 import android.nfc.NfcAdapter
 import android.nfc.Tag
-import android.nfc.tech.Ndef
 import android.os.Bundle
-import androidx.activity.ComponentActivity
+import io.github.qwadratic.nfctimesheets.LocalizedActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -56,7 +54,7 @@ import io.github.qwadratic.nfctimesheets.ui.TimeSheetsTheme
  * all" from "it read it fine and the OS just did not route it", which is exactly the question
  * that blocked us, and which no amount of staring at a dead tap could answer.
  */
-class ScanActivity : ComponentActivity() {
+class ScanActivity : LocalizedActivity() {
 
     private val app: TimeSheetsApplication get() = application as TimeSheetsApplication
     private var adapter: NfcAdapter? = null
@@ -140,7 +138,7 @@ class ScanActivity : ComponentActivity() {
     private fun onTag(tag: Tag) {
         val techs = tag.techList.map { it.substringAfterLast('.') }
         val uid = tag.id.joinToString(":") { "%02X".format(it) }
-        val uri = readUri(tag)
+        val uri = readTagUri(tag)?.let(Uri::parse)
 
         // Our own tag first: a real URL always wins over any serial table, so a tag we
         // wrote keeps working even if its serial were ever listed by mistake.
@@ -189,17 +187,6 @@ class ScanActivity : ComponentActivity() {
      * First URI record of the NDEF message. Everything is wrapped: the tag is unlocked and
      * attacker-writable (decision-15), so a malformed record is a normal event, not a crash.
      */
-    private fun readUri(tag: Tag): Uri? = runCatching {
-        val ndef = Ndef.get(tag) ?: return null
-        ndef.connect()
-        val message = try {
-            ndef.ndefMessage ?: ndef.cachedNdefMessage
-        } finally {
-            runCatching { ndef.close() }
-        }
-        message?.records?.firstNotNullOfOrNull { record -> runCatching { record.toUri() }.getOrNull() }
-    }.getOrNull()
-
     private fun statusText(s: ScanStatus): String = when (s) {
         ScanStatus.Waiting -> getString(R.string.scan_waiting)
         ScanStatus.Unsupported -> getString(R.string.scan_unsupported)

@@ -179,4 +179,6 @@ data class RunningShift(
      * server has closed must never be shown with a running timer.
      */
     val serverAutoClosed: Boolean = false,
+    /** Presentation only: a queued start is recorded locally, not yet accepted by the server. */
+    val pendingConfirmation: Boolean = false,
 )

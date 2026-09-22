@@ -481,4 +481,20 @@
     <string name="verify_reassign_unknown_location">That building no longer exists. Please reload the buildings.</string>
     <!-- %1$s = server error code -->
     <string name="verify_reassign_failed">The reassignment failed (%1$s). Please try again.</string>
+    <string name="language_title">Language</string>
+    <string name="language_de">Deutsch</string>
+    <string name="language_en">English</string>
+    <string name="language_system">Use phone language</string>
+    <string name="nav_shift">Shift</string>
+    <string name="nav_more">More</string>
+    <string name="write_activate">Activate this tag</string>
+    <string name="write_bind_next">Assign a building</string>
+    <string name="write_activation_hint">The tag is written. One test is still needed before clock-in: open activation and hold the same tag to the phone again.</string>
+    <string name="worker_tag_unreadable">This tag could not be read. Use the tag at the entrance or ask the office for help.</string>
+    <string name="shift_pending_heading">Not confirmed yet</string>
+    <string name="shift_pending_label">Time recorded on this phone</string>
+    <string name="shift_pending_body">Your time is saved on this phone but has not reached the office yet. Please check the message below.</string>
+    <string name="notify_pending_title">Not confirmed yet: %1$s</string>
+    <string name="notify_pending_body">Your time is saved on this phone. Open the app and check the message.</string>
+    <string name="a11y_shift_pending">%1$d hours and %2$d minutes recorded on this phone for %3$s. Not confirmed by the office yet.</string>
 </resources>

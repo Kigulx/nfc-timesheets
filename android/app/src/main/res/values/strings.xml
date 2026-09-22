@@ -610,4 +610,20 @@
     <string name="verify_reassign_unknown_location">Dieses Objekt gibt es nicht mehr. Bitte Objektliste neu laden.</string>
     <!-- %1$s = Fehlercode vom Server -->
     <string name="verify_reassign_failed">Neuzuweisung fehlgeschlagen (%1$s). Bitte erneut versuchen.</string>
+    <string name="language_title">Sprache</string>
+    <string name="language_de">Deutsch</string>
+    <string name="language_en">English</string>
+    <string name="language_system">Wie am Telefon</string>
+    <string name="nav_shift">Schicht</string>
+    <string name="nav_more">Mehr</string>
+    <string name="write_activate">Karte jetzt aktivieren</string>
+    <string name="write_bind_next">Gebäude zuordnen</string>
+    <string name="write_activation_hint">Die Karte ist geschrieben. Zum Einstempeln fehlt noch der Test: Öffnen Sie die Aktivierung und halten Sie dieselbe Karte erneut ans Telefon.</string>
+    <string name="worker_tag_unreadable">Diese Karte wurde nicht erkannt. Verwenden Sie die Karte am Eingang oder bitten Sie das Büro um Hilfe.</string>
+    <string name="shift_pending_heading">Noch nicht bestätigt</string>
+    <string name="shift_pending_label">Lokal erfasste Zeit</string>
+    <string name="shift_pending_body">Die Zeit ist auf diesem Telefon gespeichert, aber noch nicht bei der Verwaltung angekommen. Bitte beachten Sie den Hinweis unten.</string>
+    <string name="notify_pending_title">Noch nicht bestätigt: %1$s</string>
+    <string name="notify_pending_body">Die Zeit ist auf dem Telefon gespeichert. Öffnen Sie die App und prüfen Sie den Hinweis.</string>
+    <string name="a11y_shift_pending">%1$d Stunden und %2$d Minuten für %3$s auf diesem Telefon erfasst. Noch nicht von der Verwaltung bestätigt.</string>
 </resources>

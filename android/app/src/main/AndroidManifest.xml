@@ -75,6 +75,7 @@
     <uses-feature android:name="android.hardware.nfc" android:required="true" />
 
     <application
+        android:localeConfig="@xml/locales_config"
         android:name=".TimeSheetsApplication"
         android:allowBackup="false"
         android:icon="@mipmap/ic_launcher"
