@@ -110,7 +110,7 @@ class TimeSheetsApplication : Application() {
      * cached field read — see ShiftStore.pendingSummary — so nothing on the tap path got
      * slower, and Api swallows any failure of it rather than letting a header cost a shift.
      */
-    val api: Api by lazy { Api(cookies, { sessionRejected.value = true }, store::pendingSummary) }
+    val api: Api by lazy { Api(cookies, { sessionRejected.value = true }, store::pendingSummary, io.github.qwadratic.nfctimesheets.net.apiBaseUrl(this)) }
 
     /**
      * THE OPERATOR SIDE, DELIBERATELY A SECOND EVERYTHING.
@@ -138,7 +138,7 @@ class TimeSheetsApplication : Application() {
     // an operator — an operator does not clock in (decision-45) and has no shift queue. The
     // worker's count must not ride on the operator's cookie; the two identities do not share
     // a jar and they do not share a heartbeat either.
-    val operatorApi: Api by lazy { Api(operatorCookies, operatorSession::reject) }
+    val operatorApi: Api by lazy { Api(operatorCookies, operatorSession::reject, base = io.github.qwadratic.nfctimesheets.net.apiBaseUrl(this)) }
 
     /**
      * The operator gate's state, and the ONE place a 401 on `ts_operator` is acted on.

@@ -1062,7 +1062,7 @@ private fun manifestAndWiring() {
     // day the two differ — which is today.
     val api = File("app/src/main/kotlin/io/github/qwadratic/nfctimesheets/net/Api.kt").readText()
     check(
-        api.contains("val base = \"https://\${BuildConfig.API_HOST}\""),
+        api.contains("val base: String = \"https://\${BuildConfig.API_HOST}\""),
         "Api.kt talks to BuildConfig.API_HOST, never TAG_HOST",
     )
     check(

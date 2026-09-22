@@ -224,9 +224,15 @@ if (has('android/branding.properties')) {
   check('android talks to apiHost and claims tagHost', () => {
     assert.match(
       read('android/app/src/main/kotlin/io/github/qwadratic/nfctimesheets/net/Api.kt'),
-      /val base = "https:\/\/\$\{BuildConfig\.API_HOST\}"/,
+      /val base(?:: String)? = "https:\/\/\$\{BuildConfig\.API_HOST\}"/,
       'Api.kt must build its base from BuildConfig.API_HOST, never TAG_HOST',
     )
+    const releaseApi = read('android/app/src/release/kotlin/io/github/qwadratic/nfctimesheets/net/ApiEnvironment.kt')
+    assert.match(releaseApi, /fun apiBaseUrl\(context: Context\): String = "https:\/\/\$\{BuildConfig\.API_HOST\}"/,
+      'release API resolver must use only the configured API host')
+    assert.ok(!releaseApi.includes('getSharedPreferences'), 'release must not read the debug API override')
+    const debugApi = read('android/app/src/debug/kotlin/io/github/qwadratic/nfctimesheets/net/ApiEnvironment.kt')
+    assert.ok(debugApi.includes('override == "http://127.0.0.1:8082"'), 'debug override must be restricted to the local fixture')
     const manifest = read('android/app/src/main/AndroidManifest.xml')
     assert.match(manifest, /android:host="\$\{tagHost\}"/, 'the intent filters must use ${tagHost}')
     assert.ok(
