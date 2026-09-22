@@ -972,6 +972,28 @@ export default function ShiftsPage() {
               </div>
 
               <div className="field">
+                <label htmlFor="shift-state-filter">{tFilter('state')}</label>
+                <select
+                  id="shift-state-filter"
+                  value={serverState ?? ''}
+                  onChange={(event) => {
+                    const state = event.target.value
+                    writeFilters({
+                      state:
+                        state === 'open' || state === 'unresolved' || state === 'manual'
+                          ? state
+                          : null,
+                    })
+                  }}
+                >
+                  <option value="">{t('allStates')}</option>
+                  <option value="open">{t('stateOpen')}</option>
+                  <option value="unresolved">{t('stateUnresolved')}</option>
+                  <option value="manual">{tFilter('stateManual')}</option>
+                </select>
+              </div>
+
+              <div className="field">
                 <label htmlFor={periodFilterId}>{t('filterPeriod')}</label>
                 <select
                   id={periodFilterId}

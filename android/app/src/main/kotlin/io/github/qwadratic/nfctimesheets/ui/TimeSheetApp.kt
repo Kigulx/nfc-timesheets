@@ -101,6 +101,7 @@ import io.github.qwadratic.nfctimesheets.core.PendingWork
 import io.github.qwadratic.nfctimesheets.core.QueuedMaterialRequest
 import io.github.qwadratic.nfctimesheets.core.RunningShift
 import io.github.qwadratic.nfctimesheets.core.ShiftSignal
+import io.github.qwadratic.nfctimesheets.core.VersionTapGate
 import io.github.qwadratic.nfctimesheets.core.WireMaterialRequest
 import io.github.qwadratic.nfctimesheets.core.WireShift
 import io.github.qwadratic.nfctimesheets.data.LocalShift
@@ -163,6 +164,7 @@ private fun SignInScreen(model: TimeSheetViewModel, reasonKey: String?, openInte
     // their enrolment code into the lower one got a refusal that said nothing about why.
     // iOS has always had this as its own screen; this is Android matching it.
     var showOperator by rememberSaveable { mutableStateOf(false) }
+    var versionTapCount by rememberSaveable { mutableStateOf(0) }
     if (showOperator) {
         OperatorScreen(model, openIntent) { showOperator = false }
         return
@@ -241,8 +243,8 @@ private fun SignInScreen(model: TimeSheetViewModel, reasonKey: String?, openInte
         PendingCard(pending.pending, signedOut = true, armed = pending.pushArmed)
 
         // ONE FORM, the worker's instance of it (decision-54 §5). Everything role-specific
-        // is a lambda: this screen posts to /auth/code and /auth/sms/*, the operator gate
-        // below posts to the /auth/operator-* twins, and neither knows the other exists.
+        // is a lambda: this screen posts to /auth/code and /auth/sms/*, while the operator
+        // screen revealed by the version row posts to the /auth/operator-* twins.
         CodeSignInSection(
             smsAvailable = smsAvailable,
             busy = busy || smsBusy,
@@ -287,24 +289,35 @@ private fun SignInScreen(model: TimeSheetViewModel, reasonKey: String?, openInte
             }
         }
 
-        // BEFORE any worker session exists (TASK-252's Android half - the shape iOS's
-        // SettingsView bug had: a phone that is an operator's and NOTHING ELSE had no way
-        // into WriteTagActivity/VerifyZoneActivity at all, because both buttons used to
-        // live only on the WORKER'S post-sign-in log screen). This row composes
-        // unconditionally on SignInScreen -- reached from SessionState.SignedOut with no
-        // worker session required (TASK-267 AC4) -- and it is a NAVIGATION control, so it
-        // touches no auth gate: the gate is on the screen it opens.
+        // BEFORE any worker session exists, five taps on the version line reveal the
+        // operator door. The operator screen still owns the real authentication gate;
+        // this gesture only keeps specialist tooling out of the everyday worker UI.
+        // The full-width 48dp row remains reachable on an operator-only phone and does
+        // not require a worker session or NFC readiness.
         HorizontalDivider(Modifier.padding(top = 8.dp))
-        RowLink(stringResource(R.string.signin_operator_heading)) { showOperator = true }
+        Text(
+            stringResource(R.string.app_version_line, BuildConfig.VERSION_NAME, BuildConfig.VERSION_CODE),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(min = 48.dp)
+                .clickable(role = Role.Button) {
+                    val result = VersionTapGate.advance(versionTapCount)
+                    versionTapCount = result.tapCount
+                    if (result.openOperator) showOperator = true
+                }
+                .padding(vertical = 12.dp),
+        )
     }
 }
 
 /**
  * A text row that goes SOMEWHERE, with a chevron saying so.
  *
- * Both of this screen's non-form rows used to be bare [Text] inside a clickable [Box] — no
- * affordance at all, so „Mehr Informationen" and the operator door read as captions rather
- * than as controls (the 2026-08-29 cross-platform UX audit). The chevron is a drawn glyph
+ * Navigation rows used to be bare [Text] inside a clickable [Box] — no affordance at all,
+ * so they read as captions rather than controls (the 2026-08-29 cross-platform UX audit).
+ * The chevron is a drawn glyph
  * and not an icon dependency: nothing else in this app uses `material-icons`, and one
  * triangle is not worth adding it for.
  *
@@ -350,9 +363,10 @@ private fun Chevron() {
 /**
  * THE OPERATOR DOOR, AS ITS OWN SCREEN (decision-54 §4, restructured 2026-08-29).
  *
- * Reached from TWO places and composed the same way from both: [SignInScreen]'s row, for a
- * phone that is an operator's and nothing else, and [SettingsScreen]'s row, for a worker
- * who is already signed in and must NOT have to sign out to write or test a card. That
+ * Reached from TWO places and composed the same way from both: [SignInScreen]'s five-tap
+ * version row, for a phone that is an operator's and nothing else, and [SettingsScreen]'s
+ * visible row, for a worker who is already signed in and must NOT have to sign out to write
+ * or test a card. That
  * second door is the audit's B3: before it, a signed-in worker's only operator entry was
  * an item on the idle log list, which is not there at all on a phone whose NFC is off — so
  * "turn NFC on" and "write the tag that turns NFC on into something useful" were mutually

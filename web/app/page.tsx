@@ -109,7 +109,6 @@ const SHIFTS_UNRESOLVED_PATH = filterHref(SHIFTS_PATH, {
   period: 'all',
   state: 'unresolved',
 })
-const WORKERS_NO_EMAIL_PATH = filterHref('/workers/', { state: 'noEmail' })
 const LOCATIONS_NO_TAG_PATH = filterHref('/locations/', { state: 'noTag' })
 
 export default function DashboardPage() {
@@ -223,11 +222,6 @@ export default function DashboardPage() {
   const unresolvedShifts =
     snapshot === null ? [] : snapshot.shifts.filter((shift) => shiftState(shift) === 'unresolved')
 
-  // A worker with no email can never sign in at all (decision-22), so they can never file
-  // an hour. Silent and permanent until somebody notices it here.
-  const workersWithoutEmail =
-    snapshot === null ? [] : snapshot.workers.filter((w) => w.active && w.email === null)
-
   // An active building that appears in no loaded shift has probably never had a working
   // tag on the wall. Scoped to what was loaded, and the wording says so.
   const seenLocationIds = new Set(snapshot?.shifts.map((shift) => shift.location_id) ?? [])
@@ -286,8 +280,7 @@ export default function DashboardPage() {
       timeZone: BUSINESS_TIME_ZONE,
     })
 
-  const problemCount =
-    unresolvedShifts.length + workersWithoutEmail.length + locationsWithoutShifts.length
+  const problemCount = unresolvedShifts.length + locationsWithoutShifts.length
 
   /**
    * One row per NAMED thing that needs doing. A count alone is not actionable — "3 Objekte
@@ -306,18 +299,7 @@ export default function DashboardPage() {
         state: 'unres',
         trailing: <StateBadge state="unres" label={t('badgeUnresolved')} />,
         openLabel: t('unresolvedLink'),
-        onOpen: () => router.push(SHIFTS_UNRESOLVED_PATH),
-      }),
-    ),
-    ...workersWithoutEmail.map(
-      (worker): AttentionItem => ({
-        id: `worker-${worker.id}`,
-        who: worker.name,
-        where: t('rowNoEmail'),
-        state: 'muted',
-        trailing: <StateBadge state="muted" label={t('badgeNoEmail')} />,
-        openLabel: t('noEmailLink'),
-        onOpen: () => router.push(WORKERS_NO_EMAIL_PATH),
+        onOpen: () => router.push(filterHref(SHIFTS_PATH, { period: 'all', shift: shift.id })),
       }),
     ),
     ...locationsWithoutShifts.map(
@@ -336,9 +318,6 @@ export default function DashboardPage() {
   /** Which parts the number in the answer band is made of. Never just the total. */
   const todoParts = [
     unresolvedShifts.length === 0 ? null : t('toDoUnresolved', { count: unresolvedShifts.length }),
-    workersWithoutEmail.length === 0
-      ? null
-      : t('toDoNoEmail', { count: workersWithoutEmail.length }),
     locationsWithoutShifts.length === 0
       ? null
       : t('toDoDeadTag', { count: locationsWithoutShifts.length }),
@@ -353,7 +332,6 @@ export default function DashboardPage() {
       ? []
       : [
           unresolvedShifts.length === 0 ? t('unresolvedNone') : null,
-          workersWithoutEmail.length === 0 ? t('noEmailNone') : null,
           locationsWithoutShifts.length === 0 ? t('deadTagNone') : null,
         ].filter((note) => note !== null)
 
@@ -537,7 +515,14 @@ export default function DashboardPage() {
               },
               {
                 k: t('onSiteHeading'),
-                v: openShifts.length,
+                v:
+                  openShifts.length === 0 ? (
+                    0
+                  ) : (
+                    <Link href={filterHref(SHIFTS_PATH, { period: 'all', state: 'open' })}>
+                      {openShifts.length}
+                    </Link>
+                  ),
                 calm: true,
                 sub: onSiteSub,
               },

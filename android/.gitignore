@@ -25,6 +25,8 @@ app/google-services.json
 # Check runner scratch: third-party jars fetched on demand, never vendored
 checks/.lib/
 checks/.out/
+# Five-tap operator-entry check, compiled separately from the broad core check.
+checks/.out-version-tap/
 # The android.nfc stubs compile here, deliberately apart from checks/.out: stub classes
 # named android.nfc.* must never share a classpath with anything else.
 checks/.out-nfc/

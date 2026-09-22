@@ -125,12 +125,14 @@ export async function geocodeAddress(address) {
     // `partial_match` means "we did not find what you asked for"; APPROXIMATE means "this
     // is a district, a city or a country". Neither is a building, so neither becomes a pin.
     if (best?.partial_match === true) return noPin("PARTIAL_MATCH");
-    if (best?.geometry?.location_type === "APPROXIMATE") return noPin("APPROXIMATE_ONLY");
+    // A street's geometric centre is not the building either. Accept only a rooftop or
+    // an address interpolated along a street, never a district/street-wide centroid.
+    if (!["ROOFTOP", "RANGE_INTERPOLATED"].includes(best?.geometry?.location_type)) return noPin("APPROXIMATE_ONLY");
 
     const loc = best?.geometry?.location;
-    const lat = Number(loc?.lat);
-    const lng = Number(loc?.lng);
-    if (!Number.isFinite(lat) || !Number.isFinite(lng) || Math.abs(lat) > 90 || Math.abs(lng) > 180) {
+    const lat = loc?.lat;
+    const lng = loc?.lng;
+    if (typeof lat !== "number" || typeof lng !== "number" || !Number.isFinite(lat) || !Number.isFinite(lng) || Math.abs(lat) > 90 || Math.abs(lng) > 180) {
       Sentry.captureException(new Error("geocode returned no usable coordinate"));
       return noPin("malformed");
     }

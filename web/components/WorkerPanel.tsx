@@ -159,9 +159,8 @@ export function WorkerPanel({ worker, shifts, truncated, now, onClose }: WorkerP
         {/* Words, not colour. Inactive means: cannot file an hour at all. */}
         <dd>{worker.active ? t('statusActive') : t('statusInactive')}</dd>
 
-        {/* The email column is not a contact detail — it is the Sign in with Apple gate
-            (decision-22) — so its absence is a named state here too, not a blank. */}
-        <dt>{t('colEmailLogin')}</dt>
+        {/* Contact information is separate from login identities. */}
+        <dt>{t('fieldEmail')}</dt>
         <dd>{worker.email ?? t('noEmail')}</dd>
       </dl>
 

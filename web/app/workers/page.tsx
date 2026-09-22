@@ -49,16 +49,8 @@ import { BUSINESS_TIME_ZONE } from '@/lib/shifts'
 /**
  * Workers screen — who may file hours, and how that person gets into the app.
  *
- * The email column is not a contact detail. Sign in with Apple hands the server an email
- * address and the server only lets a worker in if an ACTIVE row already carries it
- * (decision-22), so on an iPhone this form is the whole enrolment path and `active` is the
- * lockout switch. Everything here is one client component with `useState` and `fetch`
- * because the bundle is a static export (decision-16): no server component may fetch this.
- *
- * The second enrolment path is the code column (decision-26): the director creates a short
- * code FOR A PERSON, reads it out, and the worker types it once on a phone that has no
- * Apple ID. It is an alternative to Sign in with Apple, NOT a replacement — the email
- * address is still what gets an iPhone in, which is why nothing here calls it optional.
+ * Contact email is optional. Access uses enrolment codes or configured login identities.
+ * Data is fetched on the client because this is a static export (decision-16).
  *
  * REDESIGN (B1): the list is read-only and every write happens in the drawer or behind a
  * confirmation. The fresh enrolment code deliberately did NOT become a modal: the director
@@ -513,7 +505,7 @@ export default function WorkersPage() {
           // Same half-applied-save hazard as the number above, and the same treatment: the
           // drawer STAYS OPEN, bound to `saved.id`, so a retry writes only what failed.
           reportLoginEmailFailure(cause)
-          setDraft({ ...draft, id: saved.id })
+          setDraft({ ...draft, id: saved.id, originalLoginPhone: normalisedLoginPhone })
           await load()
           return
         }
@@ -799,34 +791,26 @@ export default function WorkersPage() {
     }
   }
 
-  /**
-   * The row's state rule. Inactive is MUTED, not a problem: it was a decision somebody
-   * made. An ACTIVE person with no email address is the problem this screen exists to
-   * surface — they can never sign in on an iPhone (decision-22) — and it is carried by the
-   * word in the email cell first and the 3px rule second.
-   */
+  /** Inactive rows are muted; a missing contact email does not prevent sign-in. */
   function rowState(worker: Worker): string | undefined {
-    if (!worker.active) return 'is-muted'
-    return worker.email === null ? 'is-unres' : undefined
+    return worker.active ? undefined : 'is-muted'
   }
 
   const all = snapshot?.workers ?? null
-  /**
-   * `?state=noEmail` — the only state this screen understands. Every other value in the
-   * vocabulary is IGNORED silently (decision-38 §4): `/workers/?state=noTag` is not an
-   * error, it is the worker list.
-   *
-   * The filter is applied over ACTIVE people only, exactly as the dashboard counts them: a
-   * deactivated worker with no address cannot sign in either, but that is a decision
-   * somebody made and not a thing to fix this morning.
-   */
+  /** Legacy links can still narrow the roster to active workers without contact email. */
   const noEmailOnly = filters.state === 'noEmail'
+  const workerState =
+    noEmailOnly || filters.state === 'active' || filters.state === 'inactive' ? filters.state : null
+  const query = (filters.q ?? '').trim().toLowerCase()
   const workers =
-    all === null
-      ? null
-      : noEmailOnly
-        ? all.filter((worker) => worker.active && worker.email === null)
-        : all
+    all?.filter((worker) => {
+      if (workerState === 'noEmail' && (!worker.active || worker.email !== null)) return false
+      if (workerState === 'active' && !worker.active) return false
+      if (workerState === 'inactive' && worker.active) return false
+      return [worker.name, worker.email, worker.phone, worker.login_email, worker.phone_e164].some(
+        (value) => value?.toLowerCase().includes(query),
+      )
+    }) ?? null
 
   /**
    * `?worker=<id>` resolved against the loaded roster. A well-formed id naming nobody keeps
@@ -895,10 +879,7 @@ export default function WorkersPage() {
       <FilterChips chips={chips} />
       {panelUnknown ? <p className="notice bad">{tFilter('unknownNotice')}</p> : null}
 
-      {/* THE WARNING COMES FIRST. "Shown only once" is useless underneath a code that has
-          already scrolled past, so it stands here permanently, above the buttons that
-          create one. It also says what a code is FOR, because the same paragraph has to
-          stop a director concluding that the email address is now optional. */}
+      {/* Codes are shown only once; keep that warning before the enrolment actions. */}
       <p className="note">{t('codeStandingNote')}</p>
 
       {/* decision-51's admin-tunable ceiling on POST /auth/sms/request, next to the SMS
@@ -906,10 +887,8 @@ export default function WorkersPage() {
           per-row note above). A small inline form, not a drawer: one number, one bound,
           one fallback — the same `saveSetting`/`clearSetting` pair `/pl/` uses for
           `pl_margin_baseline_bp`, reused here rather than a second settings page. */}
-      <section className="note" aria-labelledby={rateLimitHeadingId}>
-        <p id={rateLimitHeadingId}>
-          <strong>{t('rateLimitHeading')}</strong>
-        </p>
+      <details className="note settings-disclosure">
+        <summary id={rateLimitHeadingId}>{t('rateLimitHeading')}</summary>
         <form onSubmit={submitRateLimit} noValidate>
           <Field
             id={rateLimitId}
@@ -948,7 +927,7 @@ export default function WorkersPage() {
             </button>
           </p>
         </form>
-      </section>
+      </details>
 
       {/* The one and only sighting of the code. NOT a dialog (owner, explicitly): the
           director reads it out over the phone while looking at that person's row, and a
@@ -986,8 +965,59 @@ export default function WorkersPage() {
         </section>
       )}
 
+      <div className="filter-bar roster-filters">
+        <div className="field">
+          <label htmlFor="worker-search">{t('searchLabel')}</label>
+          <input
+            id="worker-search"
+            type="search"
+            value={filters.q ?? ''}
+            onChange={(event) => setFilters({ q: event.target.value || null }, 'replace')}
+            placeholder={t('searchPlaceholder')}
+          />
+        </div>
+        <div className="field">
+          <label htmlFor="worker-status">{t('colStatus')}</label>
+          <select
+            id="worker-status"
+            value={workerState ?? ''}
+            onChange={(event) => {
+              const state = event.target.value
+              setFilters(
+                {
+                  state:
+                    state === 'active' || state === 'inactive' || state === 'noEmail'
+                      ? state
+                      : null,
+                },
+                'replace',
+              )
+            }}
+          >
+            <option value="">{t('filterAll')}</option>
+            <option value="active">{t('statusActive')}</option>
+            <option value="inactive">{t('statusInactive')}</option>
+            <option value="noEmail">{tFilter('stateNoEmail')}</option>
+          </select>
+        </div>
+        {filters.q || workerState ? (
+          <button
+            type="button"
+            className="btn btn-quiet"
+            onClick={() => setFilters({ q: null, state: null }, 'replace')}
+          >
+            {t('filterReset')}
+          </button>
+        ) : null}
+      </div>
+
       <ListPanel
         title={t('listHeading')}
+        note={
+          workers === null
+            ? undefined
+            : t('resultCount', { shown: workers.length, total: all?.length ?? 0 })
+        }
         padded={workers === null}
         action={
           <Link className="btn btn-quiet" href={OPERATORS_PATH}>
@@ -1012,7 +1042,7 @@ export default function WorkersPage() {
           /* An empty FILTER and an empty ROSTER are two different sentences. Saying „noch
              keine Mitarbeiter angelegt" to a company with six of them is the misreading
              this whole contract exists to prevent. */
-          <EmptyState>{noEmailOnly ? t('filterNoEmail') : t('emptyBodyNew')}</EmptyState>
+          <EmptyState>{all?.length ? t('filterEmpty') : t('emptyBodyNew')}</EmptyState>
         ) : (
           <table className="data-table" aria-busy={busy}>
             <caption className="visually-hidden">{t('tableCaption')}</caption>
@@ -1240,132 +1270,139 @@ export default function WorkersPage() {
               {drawerError}
             </p>
 
-            <Field
-              id={nameId}
-              label={t('fieldName')}
-              required
-              error={fieldErrors.name === undefined ? undefined : t(fieldErrors.name)}
-            >
-              <input
-                type="text"
+            <fieldset className="form-section">
+              <legend>{t('groupContact')}</legend>
+              <Field
+                id={nameId}
+                label={t('fieldName')}
                 required
-                value={draft.name}
-                onChange={(event) => setDraft({ ...draft, name: event.target.value })}
-                maxLength={120}
-                autoComplete="off"
-                disabled={busy}
-              />
-            </Field>
+                error={fieldErrors.name === undefined ? undefined : t(fieldErrors.name)}
+              >
+                <input
+                  type="text"
+                  required
+                  value={draft.name}
+                  onChange={(event) => setDraft({ ...draft, name: event.target.value })}
+                  maxLength={120}
+                  autoComplete="off"
+                  disabled={busy}
+                />
+              </Field>
 
-            <Field
-              id={emailId}
-              label={t('fieldEmail')}
-              optional
-              help={t('emailHint')}
-              error={fieldErrors.email === undefined ? undefined : t(fieldErrors.email)}
-            >
-              <input
-                type="email"
-                value={draft.email}
-                onChange={(event) => setDraft({ ...draft, email: event.target.value })}
-                maxLength={320}
-                autoComplete="off"
-                disabled={busy}
-              />
-            </Field>
+              <Field
+                id={emailId}
+                label={t('fieldEmail')}
+                optional
+                help={t('emailHint')}
+                error={fieldErrors.email === undefined ? undefined : t(fieldErrors.email)}
+              >
+                <input
+                  type="email"
+                  value={draft.email}
+                  onChange={(event) => setDraft({ ...draft, email: event.target.value })}
+                  maxLength={320}
+                  autoComplete="off"
+                  disabled={busy}
+                />
+              </Field>
 
-            {/* The phone number is NOT a login. A director who assumes it is would enrol the
+              {/* The phone number is NOT a login. A director who assumes it is would enrol the
                 whole crew with numbers and nobody could sign in, so the field carries the
                 distinction in its label AND in its hint. */}
-            <Field
-              id={phoneId}
-              label={t('fieldPhone')}
-              optional
-              help={t('phoneHint')}
-              error={fieldErrors.phone === undefined ? undefined : t(fieldErrors.phone)}
-            >
-              <input
-                type="tel"
-                value={draft.phone}
-                onChange={(event) => setDraft({ ...draft, phone: event.target.value })}
-                maxLength={40}
-                autoComplete="off"
-                disabled={busy}
-              />
-            </Field>
-
-            {/* THE LOGIN NUMBER (decision-45), directly under the phone field it contrasts
+              <Field
+                id={phoneId}
+                label={t('fieldPhone')}
+                optional
+                help={t('phoneHint')}
+                error={fieldErrors.phone === undefined ? undefined : t(fieldErrors.phone)}
+              >
+                <input
+                  type="tel"
+                  value={draft.phone}
+                  onChange={(event) => setDraft({ ...draft, phone: event.target.value })}
+                  maxLength={40}
+                  autoComplete="off"
+                  disabled={busy}
+                />
+              </Field>
+            </fieldset>
+            <fieldset className="form-section">
+              <legend>{t('groupLogin')}</legend>
+              {/* THE LOGIN NUMBER (decision-45), directly under the phone field it contrasts
                 with, and edited by its OWN write (PUT/DELETE .../phone) — never folded into
                 this form's single POST, so a claim conflict here never blocks the master
                 data above it. */}
-            <Field
-              id={loginPhoneId}
-              label={t('fieldLoginPhone')}
-              optional
-              help={t('loginPhoneHint')}
-              error={fieldErrors.loginPhone === undefined ? undefined : t(fieldErrors.loginPhone)}
-            >
-              <input
-                type="tel"
-                value={draft.loginPhone}
-                onChange={(event) => setDraft({ ...draft, loginPhone: event.target.value })}
-                maxLength={40}
-                autoComplete="off"
-                disabled={busy}
-              />
-            </Field>
+              <Field
+                id={loginPhoneId}
+                label={t('fieldLoginPhone')}
+                optional
+                help={t('loginPhoneHint')}
+                error={fieldErrors.loginPhone === undefined ? undefined : t(fieldErrors.loginPhone)}
+              >
+                <input
+                  type="tel"
+                  value={draft.loginPhone}
+                  onChange={(event) => setDraft({ ...draft, loginPhone: event.target.value })}
+                  maxLength={40}
+                  autoComplete="off"
+                  disabled={busy}
+                />
+              </Field>
 
-            {/* THE LOGIN ADDRESS (decision-64 §6), directly under the login NUMBER it sits
+              {/* THE LOGIN ADDRESS (decision-64 §6), directly under the login NUMBER it sits
                 beside as a third door, and edited by its OWN write (PUT/DELETE .../email) —
                 never folded into this form's single POST, which still writes the unrelated
                 `workers.email` column two fields above. */}
-            <Field
-              id={loginEmailId}
-              label={t('fieldLoginEmail')}
-              optional
-              help={t('loginEmailHint')}
-              error={fieldErrors.loginEmail === undefined ? undefined : t(fieldErrors.loginEmail)}
-            >
-              <input
-                type="email"
-                value={draft.loginEmail}
-                onChange={(event) => setDraft({ ...draft, loginEmail: event.target.value })}
-                maxLength={320}
-                autoComplete="off"
-                disabled={busy}
-              />
-            </Field>
-
-            {/* REQUIRED on the label, `required` on the control (which is what announces
+              <Field
+                id={loginEmailId}
+                label={t('fieldLoginEmail')}
+                optional
+                help={t('loginEmailHint')}
+                error={fieldErrors.loginEmail === undefined ? undefined : t(fieldErrors.loginEmail)}
+              >
+                <input
+                  type="email"
+                  value={draft.loginEmail}
+                  onChange={(event) => setDraft({ ...draft, loginEmail: event.target.value })}
+                  maxLength={320}
+                  autoComplete="off"
+                  disabled={busy}
+                />
+              </Field>
+            </fieldset>
+            <fieldset className="form-section">
+              <legend>{t('groupEmployment')}</legend>
+              {/* REQUIRED on the label, `required` on the control (which is what announces
                 it), and refused on submit. Three places, one rule: a person cannot be
                 filed without the number their pay is computed from. */}
-            <Field
-              id={rateId}
-              label={t('fieldRate')}
-              required
-              help={`${t('rateHint')} ${t('rateRequiredHint')}`}
-              error={fieldErrors.rate === undefined ? undefined : t(fieldErrors.rate)}
-            >
-              <input
-                type="text"
-                inputMode="decimal"
+              <Field
+                id={rateId}
+                label={t('fieldRate')}
                 required
-                value={draft.rate}
-                onChange={(event) => setDraft({ ...draft, rate: event.target.value })}
-                disabled={busy}
-              />
-            </Field>
+                help={`${t('rateHint')} ${t('rateRequiredHint')}`}
+                error={fieldErrors.rate === undefined ? undefined : t(fieldErrors.rate)}
+              >
+                <input
+                  type="text"
+                  inputMode="decimal"
+                  required
+                  value={draft.rate}
+                  onChange={(event) => setDraft({ ...draft, rate: event.target.value })}
+                  disabled={busy}
+                />
+              </Field>
 
-            <div className="field field-check">
-              <input
-                id={activeId}
-                type="checkbox"
-                checked={draft.active}
-                onChange={(event) => setDraft({ ...draft, active: event.target.checked })}
-                disabled={busy}
-              />
-              <label htmlFor={activeId}>{t('fieldActive')}</label>
-            </div>
+              <div className="field field-check">
+                <input
+                  id={activeId}
+                  type="checkbox"
+                  checked={draft.active}
+                  onChange={(event) => setDraft({ ...draft, active: event.target.checked })}
+                  disabled={busy}
+                />
+                <label htmlFor={activeId}>{t('fieldActive')}</label>
+              </div>
+            </fieldset>
           </form>
         )}
       </Drawer>

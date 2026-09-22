@@ -1265,6 +1265,38 @@ a {
   margin-bottom: 0;
 }
 
+.roster-filters .field:first-child {
+  flex: 1 1 16rem;
+}
+
+.settings-disclosure > summary,
+.cell-disclosure > summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.settings-disclosure[open] > summary {
+  margin-bottom: var(--s4);
+}
+
+.form-section {
+  min-width: 0;
+  padding: var(--s4) 0 0;
+  margin: 0 0 var(--s4);
+  border: 0;
+  border-top: 1px solid var(--border);
+}
+
+.form-section > legend {
+  padding-inline-end: var(--s3);
+  font-weight: 600;
+}
+
+.cell-disclosure {
+  margin-top: var(--s2);
+  font-size: var(--text-sm);
+}
+
 /* Label above the control, hint below it — same stack as .field, just not inside a form, so
    it is used AS `class="field toolbar-field"` and inherits `.field select` above rather than
    restating it. Width only. */
@@ -2811,6 +2843,8 @@ a {
   .btn-quiet,
   .skip-link,
   .callout > summary,
+  .settings-disclosure > summary,
+  .cell-disclosure > summary,
   .locale-switcher select,
   .theme-switcher select {
     min-height: 44px;

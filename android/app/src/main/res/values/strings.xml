@@ -35,14 +35,6 @@
     <string name="signin_submit">Anmelden</string>
     <string name="signin_submitting">Anmeldung läuft …</string>
 
-    <!-- Betreiber-Einstieg, direkt auf dem Anmeldebildschirm (vorher NUR über das
-         Mitarbeiter-Protokoll erreichbar, also für ein Telefon, das nie als Mitarbeiter
-         angemeldet war, gar nicht erreichbar - derselbe Fehler, der auf iOS bereits
-         behoben wurde: SettingsView lag nur im .eligible(worker)-Zweig). Öffnet
-         WriteTagActivity/VerifyZoneActivity direkt; beide zeigen selbst das
-         Betreiber-Code-Feld, wenn dieses Telefon noch nicht als Betreiber angemeldet ist -
-         hier wird nichts doppelt gebaut, nur der Einstieg vorgezogen. -->
-    <string name="signin_operator_heading">Betreiber? Tags beschreiben oder prüfen, ohne sich als Mitarbeiter anzumelden.</string>
     <!-- decision-54 §4: Die beiden Schaltflächen „Tag beschreiben“/„Tag prüfen“ sind
          nicht mehr direkt erreichbar. Ohne gültige Betreiber-Sitzung steht hier zuerst
          dasselbe Anmeldeformular wie oben — nur gegen /auth/operator-*. Die

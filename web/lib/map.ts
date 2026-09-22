@@ -95,6 +95,12 @@ export type GOverlayView = {
 }
 
 export type GoogleMapsApi = {
+  importLibrary(name: 'places'): Promise<{
+    PlaceAutocompleteElement: new (options: {
+      includedRegionCodes: string[]
+      requestedLanguage: string
+    }) => HTMLElement
+  }>
   Map: new (element: HTMLElement, options: Record<string, unknown>) => GMap
   Marker: new (options: Record<string, unknown>) => GMarker
   LatLngBounds: new () => GBounds
@@ -266,9 +272,8 @@ export function loadGoogleMaps(): Promise<GoogleMapsApi> {
     const script = document.createElement('script')
     // `loading=async` is Google's own recommendation and keeps the parser unblocked;
     // `v=weekly` pins the channel rather than a version we would then have to maintain.
-    // Only the `maps` library is requested — `marker`, `places` and friends are billed
-    // and unused, and `OverlayView` lives in `maps` (see the style block above for why the
-    // pin is an overlay and not an AdvancedMarkerElement).
+    // Load only `maps` initially. AddressSearch imports `places` on demand when its form
+    // opens; `OverlayView` itself lives in `maps`.
     //
     // `language` follows the admin's own locale so Google's street labels are not the one
     // English thing on a German screen; `region=AT` is FIXED, because it biases geocoding

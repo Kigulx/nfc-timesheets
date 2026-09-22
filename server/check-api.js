@@ -3015,6 +3015,47 @@ try {
     resetLoginRate();
   });
 
+  await test("TASK-338: form deactivation permanently revokes worker sessions", async () => {
+    const body = { name: "Lifecycle worker", hourly_rate_cents: 1500, active: true };
+    const { worker } = await (await asAdmin("/admin/workers", { method: "POST", body })).json();
+    await admin.query("INSERT INTO worker_sessions (token, worker_id, expires_at) VALUES ($1, $2, now() + interval '1 day')", [hashToken("lifecycle-session"), worker.id]);
+    assert.equal((await asAdmin("/admin/workers", { method: "POST", body: { ...body, id: worker.id, active: false } })).status, 200);
+    assert.equal((await asAdmin("/admin/workers", { method: "POST", body: { ...body, id: worker.id } })).status, 200);
+    assert.equal((await admin.query("SELECT 1 FROM worker_sessions WHERE worker_id = $1", [worker.id])).rowCount, 0);
+  });
+
+  await test("TASK-338: company, contact and building forms revoke links across reactivation", async () => {
+    const post = async (path, body, status = 200) => {
+      const res = await asAdmin(path, { method: "POST", body });
+      const json = await res.json();
+      assert.equal(res.status, status, JSON.stringify(json));
+      return json;
+    };
+    const { client } = await post("/admin/clients", { name: "Lifecycle company" }, 201);
+    const { contact } = await post("/admin/contacts", { name: "Lifecycle contact", client_id: client.id }, 201);
+    const { location } = await post("/admin/locations", { name: "Lifecycle building", slug: "lifecycle-building", client_id: client.id, contact_id: contact.id }, 201);
+    const pair = { contact_id: contact.id, location_id: location.id };
+    const zone = (await admin.query("INSERT INTO zones (location_id, name, verified_at) VALUES ($1, 'Lifecycle zone', now()) RETURNING id", [location.id])).rows[0];
+    for (const [path, entity] of [["/admin/contacts", contact], ["/admin/locations", location], ["/admin/clients", client]]) {
+      resetLoginRate();
+      const { token } = await post("/admin/portal-grants", pair, 201);
+      assert.equal((await call(`/portal/${token}`, { key: null })).status, 200);
+      await post(path, { ...entity, active: false });
+      assert.equal((await call(`/portal/${token}`, { key: null })).status, 404);
+      await post(path, { ...entity, active: true });
+      assert.equal((await call(`/portal/${token}`, { key: null })).status, 404, "reactivation must not resurrect a shared link");
+    }
+    const { client: other } = await post("/admin/clients", { name: "Different company" }, 201);
+    assert.equal((await admin.query("SELECT active FROM zones WHERE id = $1", [zone.id])).rows[0].active, false, "reactivating a building does not silently reactivate its retired tags");
+    const { contact: outsider } = await post("/admin/contacts", { name: "Different owner", client_id: other.id }, 201);
+    await post("/admin/portal-grants", { ...pair, contact_id: outsider.id }, 422);
+    const { token } = await post("/admin/portal-grants", pair, 201);
+    await post("/admin/contacts", { ...contact, client_id: other.id });
+    assert.equal((await call(`/portal/${token}`, { key: null })).status, 404);
+    assert.equal((await admin.query("SELECT contact_id FROM locations WHERE id = $1", [location.id])).rows[0].contact_id, null);
+    resetLoginRate();
+  });
+
   // ---- access log + PII sweep (decision-23) ---------------------------------------
   // The defect that started this: a tap failed and the server had NO evidence at all.
   // These two cases pin the fix and its safety rail — there IS a line now, and the line
@@ -4903,6 +4944,29 @@ try {
       assert.equal(stateOf("pl-a"), "never_attempted", "a building with no address was never asked about");
     });
 
+    await test("TASK-338: address edits replace stale pins and a late lookup cannot overwrite a newer address", async () => {
+      const input = { slug: "address-audit", name: "Address audit", address: "Old address", lat: 48.2, lng: 16.3 };
+      const { location } = await expect(await asAdmin("/admin/locations", { method: "POST", body: input }), 201);
+      try {
+        setGeocoderForTest(async () => ({ status: "OK", lat: 48.21, lng: 16.31, street_view_status: null }));
+        const changed = await expect(await asAdmin("/admin/locations", { method: "POST", body: { ...input, id: location.id, address: "New address" } }), 200);
+        assert.equal(changed.location.lat, 48.21, "echoed old coordinates must not win over a changed address");
+        assert.equal((await asAdmin("/admin/locations", { method: "POST", body: { ...input, lat: null } })).status, 400);
+        let started;
+        const running = new Promise(resolve => { started = resolve; });
+        let finish;
+        setGeocoderForTest(() => new Promise(resolve => { finish = resolve; started(); }));
+        const pending = asAdmin(`/admin/locations/${location.id}/geocode`, { method: "POST" });
+        await running;
+        const manual = { ...input, id: location.id, address: "Third address", lat: 48.22, lng: 16.32 };
+        await expect(await asAdmin("/admin/locations", { method: "POST", body: manual }), 200);
+        finish({ status: "OK", lat: 1, lng: 2, street_view_status: null });
+        const late = await expect(await pending, 200);
+        assert.equal(late.location.address, "Third address");
+        assert.equal(late.location.lat, 48.22, "old lookup must not move the new pin");
+      } finally { setGeocoderForTest(null); }
+    });
+
     // MEASURED AGAINST THE LIVE KEY, and the reason this guard exists at all:
     //   "Nirgendwogasse 99999, 1010 Wien" -> HTTP 200, status OK, partial_match: true,
     //                                        types ['postal_code'], APPROXIMATE,
@@ -4941,6 +5005,13 @@ try {
           results: [{ types: ["locality"], geometry: { location: { lat: 48.2, lng: 16.37 }, location_type: "APPROXIMATE" } }],
         });
         assert.equal((await geocodeAddress("Wien")).status, "APPROXIMATE_ONLY");
+        reply({ status: "OK", results: [{ geometry: { location: { lat: 48.2, lng: 16.37 }, location_type: "GEOMETRIC_CENTER" } }] });
+        assert.equal((await geocodeAddress("A street without a house number")).status, "APPROXIMATE_ONLY");
+
+        for (const lat of [null, "48.2", 91]) {
+          reply({ status: "OK", results: [{ geometry: { location: { lat, lng: 16.37 }, location_type: "ROOFTOP" } }] });
+          assert.equal((await geocodeAddress("Malformed address result")).status, "malformed");
+        }
 
         // A real building-level answer still gets through, or the guard is just an outage.
         // The second call this makes is Street View metadata, which against the live key
@@ -5459,6 +5530,7 @@ try {
         [workerId, house],
       );
       const client = Number((await admin.query("INSERT INTO clients (name) VALUES ('Portalkunde') RETURNING id")).rows[0].id);
+      await admin.query("UPDATE locations SET client_id = $2 WHERE id = $1", [house, client]);
       const contact = Number(
         (
           await admin.query("INSERT INTO contacts (client_id, name) VALUES ($1, 'Frau Gruber') RETURNING id", [client])

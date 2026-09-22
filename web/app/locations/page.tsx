@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useFormatter, useTranslations } from 'next-intl'
 import { type FormEvent, useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
+import { AddressSearch } from '@/components/AddressSearch'
 import { ConfirmModal } from '@/components/ConfirmModal'
 import { Drawer } from '@/components/Drawer'
 import { EmptyState } from '@/components/EmptyState'
@@ -497,9 +498,18 @@ export default function LocationsPage() {
    * payload — and the payload is capped, so the truncation note below applies to it too.
    */
   const [filters, setFilters] = useFilters()
+  const shareSummaryRef = useRef<HTMLElement>(null)
+  const sharedLocation = allLocations.find((location) => location.id === filters.share)
+  const sharedLocationId = sharedLocation?.id
+  useEffect(() => {
+    if (!sharedLocationId) return
+    shareSummaryRef.current?.focus({ preventScroll: true })
+    shareSummaryRef.current?.scrollIntoView({ block: 'center' })
+  }, [sharedLocationId])
   const seenLocationIds = new Set((snapshot?.shifts ?? []).map((shift) => shift.location_id))
   const noTagOnly = filters.state === 'noTag'
   const locations = allLocations.filter((location) => {
+    if (filters.share !== null && location.id !== filters.share) return false
     if (noTagOnly && !(location.active && !seenLocationIds.has(location.id))) return false
     if (filters.client !== null && location.client_id !== filters.client) return false
     return true
@@ -1025,7 +1035,14 @@ export default function LocationsPage() {
    */
   function shareCell(location: Location, contact: Contact | undefined) {
     const grant = grants.find((row) => row.location_id === location.id)
-    const canShare = contact?.active === true && location.active
+    const companyActive = clients.some(
+      (client) => client.id === location.client_id && client.active,
+    )
+    const canShare =
+      contact?.active === true &&
+      location.active &&
+      companyActive &&
+      contact.client_id === location.client_id
 
     if (grant !== undefined) {
       return (
@@ -1060,13 +1077,22 @@ export default function LocationsPage() {
       )
     }
 
-    if (contact === undefined) return <span className="cell-muted">{t('shareNoContact')}</span>
+    if (contact === undefined)
+      return (
+        <>
+          <span className="cell-muted">{t('shareNoContact')}</span>
+          <button type="button" className="btn btn-quiet" onClick={() => openEdit(location)}>
+            {t('shareSetContact')}
+          </button>
+        </>
+      )
     if (!contact.active) {
       return <span className="cell-muted">{t('shareContactInactive', { name: contact.name })}</span>
     }
     if (!location.active) {
       return <span className="cell-muted">{t('shareInactiveBuilding')}</span>
     }
+    if (!companyActive) return <span className="cell-muted">{t('shareInactiveClient')}</span>
     return (
       <button
         type="button"
@@ -1097,6 +1123,17 @@ export default function LocationsPage() {
       ? null
       : (allLocations.find((location) => location.id === filters.zones) ?? null)
   const zonesUnknown = filters.zones !== null && snapshot !== null && zonedBuilding === null
+  const zonesPanelRef = useRef<HTMLDivElement>(null)
+  const zonesTriggerRef = useRef<HTMLButtonElement | null>(null)
+  const zonedBuildingId = zonedBuilding?.id
+  useEffect(() => {
+    if (zonedBuildingId) {
+      zonesPanelRef.current?.focus({ preventScroll: true })
+      zonesPanelRef.current?.scrollIntoView({ block: 'start' })
+    } else {
+      zonesTriggerRef.current?.focus({ preventScroll: true })
+    }
+  }, [zonedBuildingId])
   /** Live first, then the stood-down ones history still names. */
   const zonesOfBuilding =
     zonedBuilding === null ? [] : allZones.filter((zone) => zone.location_id === zonedBuilding.id)
@@ -1165,6 +1202,15 @@ export default function LocationsPage() {
           because a link narrowed it must not read as a company with three buildings. */}
       <FilterChips
         chips={[
+          filters.share === null
+            ? null
+            : {
+                key: 'share',
+                label: t('colShare'),
+                value: sharedLocation?.name ?? tFilter('unknownLocation'),
+                unknown: snapshot !== null && !sharedLocation,
+                onRemove: () => setFilters({ share: null }, 'replace'),
+              },
           noTagOnly
             ? {
                 key: 'state',
@@ -1184,7 +1230,9 @@ export default function LocationsPage() {
               },
         ].filter((chip) => chip !== null)}
       />
-      {clientUnknown || openUnknown ? (
+      {clientUnknown ||
+      openUnknown ||
+      (filters.share !== null && snapshot !== null && !sharedLocation) ? (
         <p className="notice bad">{tFilter('unknownNotice')}</p>
       ) : null}
 
@@ -1289,132 +1337,131 @@ export default function LocationsPage() {
       {/* NO "+ Zone anlegen" ACTION on this panel (decision-54 §2): zones are minted by an
           operator at the door, not from this desk. It still edits what exists. */}
       {zonedBuilding === null ? null : (
-        <ListPanel title={t('zonesHeading', { name: zonedBuilding.name })}>
-          <div className="list-body">
-            {/* The AREA, in words, with its three genuinely different answers. A floor is
+        <div ref={zonesPanelRef} tabIndex={-1} className="zones-panel">
+          <ListPanel title={t('zonesHeading', { name: zonedBuilding.name })}>
+            <div className="list-body">
+              {/* The AREA, in words, with its three genuinely different answers. A floor is
                 never printed as a total: an unmeasured Tiefgarage makes every EUR/m2 figure
                 on /pl/ a confidently wrong benchmark rather than an approximately right one. */}
-            <p className="note num">{zoneArea === null ? '' : areaSentence(zoneArea)}</p>
+              <p className="note num">{zoneArea === null ? '' : areaSentence(zoneArea)}</p>
 
-            {/* THE DEPLOYMENT ORDER, said out loud where the second tag gets created
+              {/* THE DEPLOYMENT ORDER, said out loud where the second tag gets created
                 (decision-43, Consequences). A second physical tag inside one building,
                 deployed before the zone-aware app is on the phone in the field, turns every
                 intra-building tap into an auto-closed shift plus a new one: a flood of
                 unresolved, unpaid work. It is a sentence, not a lock, because the admin is
                 the person who knows which build the phone is running. */}
-            <p className="notice">{t('zonesSecondTagWarning')}</p>
+              <p className="notice">{t('zonesSecondTagWarning')}</p>
 
-            {/* THE VERIFICATION TAP is no longer a warning here (decision-47): the test
+              {/* THE VERIFICATION TAP is no longer a warning here (decision-47): the test
                 scan runs read-only, on an operator session that has no shift credential,
                 and posts no shift — it stopped being true the moment
                 POST /operator/zones/:id/verify shipped, and `zonesTestTapWarning` is
                 DELETED with it. Which zones still need that visit is now said on every
                 row below, and once more in the Zonen cell of the buildings list. */}
 
-            <p className="form-actions">
-              <button
-                type="button"
-                className="btn btn-ghost"
-                onClick={() => setFilters({ zones: null }, 'replace')}
-              >
-                {t('zonesClose')}
-              </button>
-            </p>
-          </div>
-
-          {zonesOfBuilding.length === 0 ? (
-            <div className="list-body">
-              {/* NOT A SCOLDING. Nothing is broken and nothing is missing that stops work:
-                  this building's own tag resolves and its workers clock in. What a zone
-                  buys is the area, and per-door tag activity. */}
-              <EmptyState>{t('zonesEmpty')}</EmptyState>
+              <p className="form-actions">
+                <button
+                  type="button"
+                  className="btn btn-ghost"
+                  onClick={() => setFilters({ zones: null }, 'replace')}
+                >
+                  {t('zonesClose')}
+                </button>
+              </p>
             </div>
-          ) : (
-            <table className="data-table" aria-busy={busy}>
-              <caption className="visually-hidden">
-                {t('zonesTableCaption', { name: zonedBuilding.name })}
-              </caption>
-              <thead>
-                <tr>
-                  <th scope="col">{t('colZoneName')}</th>
-                  <th scope="col" className="col-numeric">
-                    {t('colArea')}
-                  </th>
-                  <th scope="col">{t('colZoneTag')}</th>
-                  <th scope="col">{t('colLastTap')}</th>
-                  <th scope="col">{t('colStatus')}</th>
-                  <th scope="col">{t('colActions')}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {zonesOfBuilding.map((zone) => (
-                  <tr key={zone.id} className={zone.active ? undefined : 'is-muted'}>
-                    <th scope="row">
-                      {zone.name}
-                      {zone.note === null || zone.note === '' ? null : (
-                        <span className="shift-state-note">{zone.note}</span>
-                      )}
+
+            {zonesOfBuilding.length === 0 ? (
+              <div className="list-body">
+                {/* New cards are set up and verified in the operator app (decisions54/69). */}
+                <EmptyState>{t('zonesEmpty')}</EmptyState>
+              </div>
+            ) : (
+              <table className="data-table" aria-busy={busy}>
+                <caption className="visually-hidden">
+                  {t('zonesTableCaption', { name: zonedBuilding.name })}
+                </caption>
+                <thead>
+                  <tr>
+                    <th scope="col">{t('colZoneName')}</th>
+                    <th scope="col" className="col-numeric">
+                      {t('colArea')}
                     </th>
-                    <td className="col-numeric num">
-                      {/* NULL IS NOT 0 (decision-43). A zone nobody has measured is real, and
+                    <th scope="col">{t('colZoneTag')}</th>
+                    <th scope="col">{t('colLastTap')}</th>
+                    <th scope="col">{t('colStatus')}</th>
+                    <th scope="col">{t('colActions')}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {zonesOfBuilding.map((zone) => (
+                    <tr key={zone.id} className={zone.active ? undefined : 'is-muted'}>
+                      <th scope="row">
+                        {zone.name}
+                        {zone.note === null || zone.note === '' ? null : (
+                          <span className="shift-state-note">{zone.note}</span>
+                        )}
+                      </th>
+                      <td className="col-numeric num">
+                        {/* NULL IS NOT 0 (decision-43). A zone nobody has measured is real, and
                           an invented area is worse than a missing one. */}
-                      {zone.area_sqm === null ? (
-                        <span className="cell-muted">{t('areaUnmeasured')}</span>
-                      ) : (
-                        t('areaValue', {
-                          area: format.number(zone.area_sqm, { maximumFractionDigits: 2 }),
-                        })
-                      )}
-                    </td>
-                    <td>
-                      {/* Words first. The state is named, then the exact string. */}
-                      <span>
-                        {tagStateOf(zone) === 'adopted'
-                          ? t('zoneTagAdopted', { serial: zone.tag_serial ?? '' })
-                          : tagStateOf(zone) === 'written'
-                            ? t('zoneTagWritten')
-                            : t('zoneTagPending')}
-                      </span>
-                      {/* An ADOPTED tag has no URL on it at all — it is somebody else's
+                        {zone.area_sqm === null ? (
+                          <span className="cell-muted">{t('areaUnmeasured')}</span>
+                        ) : (
+                          t('areaValue', {
+                            area: format.number(zone.area_sqm, { maximumFractionDigits: 2 }),
+                          })
+                        )}
+                      </td>
+                      <td>
+                        {/* Words first. The state is named, then the exact string. */}
+                        <span>
+                          {tagStateOf(zone) === 'adopted'
+                            ? t('zoneTagAdopted', { serial: zone.tag_serial ?? '' })
+                            : tagStateOf(zone) === 'written'
+                              ? t('zoneTagWritten')
+                              : t('zoneTagPending')}
+                        </span>
+                        {/* An ADOPTED tag has no URL on it at all — it is somebody else's
                           hardware, matched by serial through the roster — so printing our
                           URI beside it would invite writing over a tag we do not own. */}
-                      {tagStateOf(zone) === 'adopted' ? null : (
-                        <>
-                          <code className="code-block">{tagUri(zone.id)}</code>
-                          <button
-                            type="button"
-                            className="btn btn-quiet"
-                            onClick={() =>
-                              copy(
-                                tagUri(zone.id),
-                                t('copied', { name: zone.name }),
-                                t('copyFailed', { name: zone.name }),
-                              )
-                            }
-                          >
-                            {t('copyTag')}
-                            <span className="visually-hidden">
-                              {t('forLocation', { name: zone.name })}
-                            </span>
-                          </button>
-                        </>
-                      )}
-                    </td>
-                    <td>
-                      {/* NOT bounded by the month filter above: „das Tiefgaragen-Tag wurde
+                        {tagStateOf(zone) === 'adopted' ? null : (
+                          <>
+                            <code className="code-block">{tagUri(zone.id)}</code>
+                            <button
+                              type="button"
+                              className="btn btn-quiet"
+                              onClick={() =>
+                                copy(
+                                  tagUri(zone.id),
+                                  t('copied', { name: zone.name }),
+                                  t('copyFailed', { name: zone.name }),
+                                )
+                              }
+                            >
+                              {t('copyTag')}
+                              <span className="visually-hidden">
+                                {t('forLocation', { name: zone.name })}
+                              </span>
+                            </button>
+                          </>
+                        )}
+                      </td>
+                      <td>
+                        {/* NOT bounded by the month filter above: „das Tiefgaragen-Tag wurde
                           seit 14. Mai nicht getippt" is precisely the answer a period would
                           hide, and it is the maintenance question a zone can answer. */}
-                      {zone.last_tap_at === null ? (
-                        <span className="cell-muted">{t('zoneNeverTapped')}</span>
-                      ) : (
-                        format.dateTime(new Date(zone.last_tap_at), {
-                          dateStyle: 'medium',
-                          timeZone: BUSINESS_TIME_ZONE,
-                        })
-                      )}
-                    </td>
-                    <td>
-                      {/*
+                        {zone.last_tap_at === null ? (
+                          <span className="cell-muted">{t('zoneNeverTapped')}</span>
+                        ) : (
+                          format.dateTime(new Date(zone.last_tap_at), {
+                            dateStyle: 'medium',
+                            timeZone: BUSINESS_TIME_ZONE,
+                          })
+                        )}
+                      </td>
+                      <td>
+                        {/*
                         VERIFICATION (decision-47). `active` still means what it always
                         meant — "this tag is on the wall, off it, or stood down" — and stays
                         the FIRST branch, unchanged. `verified_at` is a SEPARATE fact ON TOP
@@ -1424,77 +1471,78 @@ export default function LocationsPage() {
                         §3), and nothing here is a filter: an unverified zone stays fully
                         visible in this list, it just says so.
                       */}
-                      {!zone.active ? (
-                        t('zoneStatusInactive')
-                      ) : zone.verified_at === null ? (
-                        <>
-                          <span className="state-word is-unres">
-                            <span aria-hidden="true">▲</span> {t('zoneWaitingVerification')}
+                        {!zone.active ? (
+                          t('zoneStatusInactive')
+                        ) : zone.verified_at === null ? (
+                          <>
+                            <span className="state-word is-unres">
+                              <span aria-hidden="true">▲</span> {t('zoneWaitingVerification')}
+                            </span>
+                            <span className="shift-state-note">
+                              {t('zoneWaitingVerificationHint')}
+                            </span>
+                            <span className="shift-state-note">
+                              {t.rich('zoneVerifyStepsIssue', {
+                                operatorsLink: (chunks) => (
+                                  <Link href={OPERATORS_PATH}>{chunks}</Link>
+                                ),
+                              })}
+                            </span>
+                            <span className="shift-state-note">{t('zoneVerifyStepsOpen')}</span>
+                            <span className="shift-state-note">{t('zoneVerifyStepsScan')}</span>
+                          </>
+                        ) : (
+                          t('zoneVerifiedBy', {
+                            date: format.dateTime(new Date(zone.verified_at), {
+                              dateStyle: 'medium',
+                              timeZone: BUSINESS_TIME_ZONE,
+                            }),
+                            operator: zone.verified_by_operator_name ?? t('zoneVerifiedByUnknown'),
+                          })
+                        )}
+                      </td>
+                      <td className="cell-actions">
+                        <button
+                          type="button"
+                          className="btn btn-quiet"
+                          onClick={() => openZoneEdit(zone)}
+                        >
+                          {t('edit')}
+                          <span className="visually-hidden">
+                            {t('forLocation', { name: zone.name })}
                           </span>
-                          <span className="shift-state-note">
-                            {t('zoneWaitingVerificationHint')}
-                          </span>
-                          <span className="shift-state-note">
-                            {t.rich('zoneVerifyStepsIssue', {
-                              operatorsLink: (chunks) => (
-                                <Link href={OPERATORS_PATH}>{chunks}</Link>
-                              ),
-                            })}
-                          </span>
-                          <span className="shift-state-note">{t('zoneVerifyStepsOpen')}</span>
-                          <span className="shift-state-note">{t('zoneVerifyStepsScan')}</span>
-                        </>
-                      ) : (
-                        t('zoneVerifiedBy', {
-                          date: format.dateTime(new Date(zone.verified_at), {
-                            dateStyle: 'medium',
-                            timeZone: BUSINESS_TIME_ZONE,
-                          }),
-                          operator: zone.verified_by_operator_name ?? t('zoneVerifiedByUnknown'),
-                        })
-                      )}
-                    </td>
-                    <td className="cell-actions">
-                      <button
-                        type="button"
-                        className="btn btn-quiet"
-                        onClick={() => openZoneEdit(zone)}
-                      >
-                        {t('edit')}
-                        <span className="visually-hidden">
-                          {t('forLocation', { name: zone.name })}
-                        </span>
-                      </button>
-                      {/* THE RESUMABLE ERRAND. The zone exists; only the tag is
+                        </button>
+                        {/* THE RESUMABLE ERRAND. The zone exists; only the tag is
                           outstanding, and the list keeps offering it until somebody is
                           standing at the right door with the right phone. */}
-                      <button
-                        type="button"
-                        className="btn btn-quiet"
-                        onClick={() => openZoneTag(zone)}
-                      >
-                        {tagStateOf(zone) === 'pending' ? t('zoneTagFinish') : t('zoneTagEdit')}
-                        <span className="visually-hidden">
-                          {t('forLocation', { name: zone.name })}
-                        </span>
-                      </button>
-                      <button
-                        type="button"
-                        className="btn btn-quiet"
-                        onClick={() => (zone.active ? setPendingZoneOff(zone) : toggleZone(zone))}
-                      >
-                        {zone.active ? t('deactivate') : t('activate')}
-                        <span className="visually-hidden">
-                          {t('forLocation', { name: zone.name })}
-                        </span>
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-        </ListPanel>
+                        <button
+                          type="button"
+                          className="btn btn-quiet"
+                          onClick={() => openZoneTag(zone)}
+                        >
+                          {tagStateOf(zone) === 'pending' ? t('zoneTagFinish') : t('zoneTagEdit')}
+                          <span className="visually-hidden">
+                            {t('forLocation', { name: zone.name })}
+                          </span>
+                        </button>
+                        <button
+                          type="button"
+                          className="btn btn-quiet"
+                          onClick={() => (zone.active ? setPendingZoneOff(zone) : toggleZone(zone))}
+                        >
+                          {zone.active ? t('deactivate') : t('activate')}
+                          <span className="visually-hidden">
+                            {t('forLocation', { name: zone.name })}
+                          </span>
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </ListPanel>
+        </div>
       )}
 
       {/*
@@ -1563,12 +1611,9 @@ export default function LocationsPage() {
             <thead>
               <tr>
                 <th scope="col">{t('colName')}</th>
-                <th scope="col">{t('colAddress')}</th>
                 <th scope="col">{t('colClient')}</th>
                 <th scope="col">{t('colContract')}</th>
                 <th scope="col">{t('colZones')}</th>
-                <th scope="col">{t('colShare')}</th>
-                <th scope="col">{t('colStatus')}</th>
                 <th scope="col">{t('colActions')}</th>
               </tr>
             </thead>
@@ -1595,14 +1640,17 @@ export default function LocationsPage() {
                         {' '}
                         <code className="code-inline">{location.slug}</code>
                       </span>
+                      <span className="shift-state-note">
+                        {location.address === null ? (
+                          <span className="cell-muted">{t('noAddress')}</span>
+                        ) : (
+                          location.address
+                        )}
+                      </span>
+                      <span className="shift-state-note">
+                        {location.active ? t('statusActive') : t('statusInactive')}
+                      </span>
                     </th>
-                    <td>
-                      {location.address === null ? (
-                        <span className="cell-muted">{t('noAddress')}</span>
-                      ) : (
-                        location.address
-                      )}
-                    </td>
                     <td>
                       {location.client_name === null ? (
                         <span className="cell-muted">{t('noClient')}</span>
@@ -1612,6 +1660,18 @@ export default function LocationsPage() {
                       <span className="shift-state-note">
                         {location.contact_name === null ? t('noContact') : location.contact_name}
                       </span>
+                      <details
+                        className="cell-disclosure"
+                        open={filters.share === location.id ? true : undefined}
+                      >
+                        <summary ref={filters.share === location.id ? shareSummaryRef : undefined}>
+                          {t('colShare')}
+                          <span className="visually-hidden">
+                            {t('forLocation', { name: location.name })}
+                          </span>
+                        </summary>
+                        {shareCell(location, contact)}
+                      </details>
                     </td>
                     <td>
                       {/* /contracts/ left the sidebar (decision-39). This is one of its
@@ -1660,7 +1720,14 @@ export default function LocationsPage() {
                       <button
                         type="button"
                         className="btn btn-quiet"
-                        onClick={() => setFilters({ zones: location.id }, 'push')}
+                        onClick={(event) => {
+                          zonesTriggerRef.current = event.currentTarget
+                          setFilters({ zones: location.id }, 'push')
+                          if (zonedBuildingId === location.id) {
+                            zonesPanelRef.current?.focus()
+                            zonesPanelRef.current?.scrollIntoView({ block: 'start' })
+                          }
+                        }}
                       >
                         {t('zonesManage')}
                         <span className="visually-hidden">
@@ -1670,23 +1737,7 @@ export default function LocationsPage() {
                       <span className="shift-state-note num">
                         {areaSentence(areaOf(location.id))}
                       </span>
-                      {/*
-                        THE ZONE STATE LIVES HERE AND NOWHERE ELSE ON THIS ROW.
-
-                        It used to be said twice — once here and once as a note under the
-                        Status cell — and the second copy was the wrong place for two
-                        reasons. It read as a qualifier on the OPERATIONAL word beside it,
-                        which is the merge decision-43 §3 exists to prevent; and the Status
-                        column is 57px wide, so „angelegt" (60px) could not fit in it at
-                        1440px and was cut mid-word (demo/audit-table-words.mjs). One
-                        statement, in the column the reader is already looking at for zones.
-
-                        TWO BRANCHES, because the reassurance is only TRUE for one of them.
-                        An ACTIVE building with no zones clocks workers in exactly as it did
-                        before zones existed and the card already on the wall carries its
-                        uuid — say so. A building that has been stood down does not, and
-                        printing the sentence anyway would be a false promise about a wall.
-                      */}
+                      {/* Zone readiness is separate from the administrative active state. */}
                       {zoneStateOf(zonesHere.length) === 'unzoned' ? (
                         <span className="shift-state-note">
                           {location.active ? t('zonesNoneStillWorks') : t('statusUnzoned')}
@@ -1733,21 +1784,6 @@ export default function LocationsPage() {
                         existed for.
                       */}
                     </td>
-                    <td>{shareCell(location, contact)}</td>
-                    {/*
-                      Text, not a colour: the status has to survive greyscale and a screen
-                      reader.
-
-                      TWO WORDS, KEPT APART PERMANENTLY (decision-43 §3), and this cell now
-                      holds exactly ONE of them: `location.active`. There is no building-
-                      level tap left for this word to describe (decision-69 retired the last
-                      one), so it now reads simply as the administrative on/off switch. The
-                      zone state is PRESENTATION, it lives in the Zonen column, and it is
-                      deliberately NOT repeated here: a presentational note stacked under the
-                      operational word is read as a qualifier on it, which is the merge this
-                      split exists to prevent.
-                    */}
-                    <td>{location.active ? t('statusActive') : t('statusInactive')}</td>
                     <td className="cell-actions">
                       <button
                         type="button"
@@ -1884,12 +1920,23 @@ export default function LocationsPage() {
                 <input
                   type="text"
                   value={draft.address}
-                  onChange={(event) => setDraft({ ...draft, address: event.target.value })}
+                  onChange={(event) =>
+                    setDraft({ ...draft, address: event.target.value, lat: null, lng: null })
+                  }
                   maxLength={300}
                   autoComplete="off"
                   disabled={busy}
                 />
               </Field>
+              <AddressSearch
+                value={draft.address}
+                disabled={busy}
+                onSelect={(address) =>
+                  setDraft((current) =>
+                    current === null ? null : { ...current, address, lat: null, lng: null },
+                  )
+                }
+              />
 
               {/* The client select carries "+ Neuer Kunde …" and expands one more field IN
                   PLACE. Not a second drawer on top of this one: a focus trap inside a focus
@@ -2072,12 +2119,16 @@ export default function LocationsPage() {
                 <input
                   id={activeId}
                   type="checkbox"
+                  aria-describedby={`${activeId}-hint`}
                   checked={draft.active}
                   onChange={(event) => setDraft({ ...draft, active: event.target.checked })}
                   disabled={busy}
                 />
                 <label htmlFor={activeId}>{t('fieldActive')}</label>
               </div>
+              <p className="field-hint" id={`${activeId}-hint`}>
+                {t('activeHint')}
+              </p>
             </div>
 
             {/* NO STEP 3. The optional first zone left with admin zone creation itself
