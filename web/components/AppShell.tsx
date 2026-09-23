@@ -19,6 +19,8 @@ export function AppShell({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (
       isClientPortalPath(pathname) ||
+      pathname === '/product/' ||
+      pathname === '/product' ||
       ['/login/', '/login', '/welcome/', '/welcome'].includes(pathname)
     ) {
       setAccount(null)
@@ -40,7 +42,9 @@ export function AppShell({ children }: { children: ReactNode }) {
   // out, no language switcher, and above all no link that leads into the admin app. The
   // person reading it works for another company. It renders its own <main>, so this returns
   // the children untouched.
-  if (isClientPortalPath(pathname)) return <>{children}</>
+  if (isClientPortalPath(pathname) || pathname === '/product/' || pathname === '/product') {
+    return <>{children}</>
+  }
 
   // The sign-in screen gets no chrome: navigating an admin sidebar or pressing "sign out"
   // before there is a session is noise at best and a 401 at worst.

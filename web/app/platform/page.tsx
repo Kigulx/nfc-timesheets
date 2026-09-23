@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation'
 import { useFormatter, useTranslations } from 'next-intl'
 import { type FormEvent, useCallback, useEffect, useRef, useState } from 'react'
 import { Field } from '@/components/Field'
+import { TrialRequestsInbox } from '@/components/TrialRequestsInbox'
 import { ApiError } from '@/lib/api'
 import { loginPathWithReturn } from '@/lib/nav'
 import {
@@ -198,6 +199,7 @@ export default function PlatformPage() {
           </div>
         )}
       </section>
+      <TrialRequestsInbox />
     </div>
   )
 }

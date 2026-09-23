@@ -21,6 +21,7 @@ import { operatorRoutes } from "./routes/operator.js";
 import { portalRoutes } from "./routes/portal.js";
 import { webhookRoutes } from "./routes/webhooks.js";
 import { workspaceRoutes } from "./routes/workspaces.js";
+import { trialRequestRoutes } from "./routes/trial-requests.js";
 import { wellknown } from "./routes/wellknown.js";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
@@ -79,6 +80,7 @@ const routes = [
   ...operatorRoutes,
   ...webhookRoutes,
   ...workspaceRoutes,
+  ...trialRequestRoutes,
 ];
 
 async function health() {

@@ -7,6 +7,7 @@ export async function prepareWorkspaceTestDb(admin, schema) {
   await admin.query("SELECT set_config('app.system','on',false), set_config('app.tenant_id','1',false)");
   await admin.query(readFileSync(new URL("./migrations/022_company_workspaces.sql", import.meta.url), "utf8"));
   await admin.query(readFileSync(new URL("./migrations/023_workspace_onboarding.sql", import.meta.url), "utf8"));
+  await admin.query(readFileSync(new URL("./migrations/024_trial_requests.sql", import.meta.url), "utf8"));
   await admin.query(`CREATE ROLE ${pg.escapeIdentifier(role)} NOLOGIN NOSUPERUSER NOBYPASSRLS`);
   await admin.query(`GRANT USAGE ON SCHEMA ${pg.escapeIdentifier(schema)} TO ${pg.escapeIdentifier(role)}`);
   await admin.query(`GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA ${pg.escapeIdentifier(schema)} TO ${pg.escapeIdentifier(role)}`);
