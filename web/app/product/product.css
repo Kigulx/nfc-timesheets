@@ -194,6 +194,7 @@
 }
 .landing-hero-actions {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 28px;
   margin: 32px 0 34px;
@@ -231,7 +232,7 @@
 .landing-button-primary:hover {
   background: #0c3932;
 }
-.landing-button-dark {
+.landing .landing-button-dark {
   background: #0f302d;
   color: #fff;
 }

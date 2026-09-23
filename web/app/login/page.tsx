@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import { type FormEvent, useEffect, useId, useState } from 'react'
 import { Field } from '@/components/Field'
+import { MicrosoftPlaceholder } from '@/components/MicrosoftPlaceholder'
 import { ApiError, login } from '@/lib/api'
 import type { ErrorKey } from '@/lib/locale'
 import { returnToFromLocation } from '@/lib/nav'
@@ -153,6 +154,7 @@ export default function LoginPage() {
           {pending ? t('submitting') : t('submit')}
         </button>
       </form>
+      <MicrosoftPlaceholder />
     </div>
   )
 }

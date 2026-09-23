@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { useLocale, useTranslations } from 'next-intl'
 import { type FormEvent, useState } from 'react'
 import { useLocaleSetting } from '@/components/IntlProvider'
+import { MicrosoftPlaceholder } from '@/components/MicrosoftPlaceholder'
 import { ApiError, apiFetch } from '@/lib/api'
 import type { Locale } from '@/lib/locale'
 import { LOGIN_PATH } from '@/lib/nav'
@@ -138,6 +139,7 @@ function TapStory() {
 
 export default function ProductPage() {
   const t = useTranslations('landing')
+  const integrations = useTranslations('integrations')
   const locale = useLocale()
   const { setLocale } = useLocaleSetting()
   const [state, setState] = useState<TrialState>('idle')
@@ -218,6 +220,9 @@ export default function ProductPage() {
             <div className="landing-hero-actions">
               <a href="#trial" className="landing-button landing-button-primary">
                 {t('heroCta')} <span aria-hidden="true">↗</span>
+              </a>
+              <a href="#book-call" className="landing-button landing-button-dark">
+                {t('bookCall')}
               </a>
               <a href="#how" className="landing-text-link">
                 {t('heroSecondary')} <span aria-hidden="true">↓</span>
@@ -472,6 +477,35 @@ export default function ProductPage() {
               </p>
             )}
           </form>
+        </section>
+        <section className="landing-section" id="book-call" aria-labelledby="book-call-title">
+          <h2 id="book-call-title">{t('bookCall')}</h2>
+          <p>{t('bookingUnavailable')}</p>
+        </section>
+        <section className="landing-section" aria-labelledby="integrations-title">
+          <h2 id="integrations-title">{integrations('title')}</h2>
+          <div className="landing-steps">
+            {(['microsoft365', 'outlook', 'google'] as const).map((provider) => (
+              <article className="landing-step" key={provider}>
+                <h3>{integrations(provider)}</h3>
+                <p>
+                  <strong>{integrations('soon')}</strong>
+                </p>
+                <p>
+                  {integrations(
+                    (
+                      {
+                        microsoft365: 'microsoft365Note',
+                        outlook: 'outlookNote',
+                        google: 'googleNote',
+                      } as const
+                    )[provider],
+                  )}
+                </p>
+              </article>
+            ))}
+          </div>
+          <MicrosoftPlaceholder />
         </section>
       </main>
       <footer className="landing-footer">
