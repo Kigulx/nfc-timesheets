@@ -5,7 +5,7 @@ status: Done
 assignee:
   - '@codex'
 created_date: '2026-09-23 18:21'
-updated_date: '2026-09-23 18:51'
+updated_date: '2026-09-23 19:16'
 labels:
   - web
   - landing
@@ -38,6 +38,14 @@ ordinal: 269000
 <!-- SECTION:PLAN:BEGIN -->
 Implement isolated changes with DE/EN strings, reuse existing calculations, verify UI and edge cases, review decisions and produce PDF.
 <!-- SECTION:PLAN:END -->
+
+## Implementation Notes
+
+<!-- SECTION:NOTES:BEGIN -->
+Owner requested landing visual refinement and stronger top CTA on 2026-09-23.
+
+Visual revision verified: larger CTA/buttons/type, DE/EN segmented44px controls, consistent SVG icons. Cleaner left arm, hand and phone share shoulder transform; 3.2s infinite loop with pause/reduced-motion. pnpm verify and branding pass. Dedicated browser QA: DE/EN320/390 no overflow; DE920 pause/status26px gap; DE1250 header fits; pause held ~30s and Enter resumed; motion continues beyond12s. Dedicated65-ADR review no blockers.
+<!-- SECTION:NOTES:END -->
 
 ## Final Summary
 

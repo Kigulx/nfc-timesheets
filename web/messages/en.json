@@ -1764,7 +1764,10 @@
       }
     },
     "bookCall": "Book a call with us",
-    "bookingUnavailable": "Call booking is coming soon. Appointments cannot be booked yet. You can still request trial access using the form above."
+    "bookingUnavailable": "Call booking is coming soon. Appointments cannot be booked yet. You can still request trial access using the form above.",
+    "animationPause": "Pause animation",
+    "animationPlay": "Play animation",
+    "bookCallShort": "Book a call"
   },
   "periodPicker": {
     "last30Days": "Last 30 days",
@@ -1782,16 +1785,20 @@
     "invalid": "Choose a valid range with the end on or after the start."
   },
   "integrations": {
-    "title": "Planned integrations",
+    "title": "Your tools. One connected day.",
     "soon": "Coming soon",
     "microsoftSignIn": "Sign in with Microsoft",
     "signInNote": "Work accounts from Microsoft 365 / Microsoft Entra ID are planned. Microsoft sign-in is not available yet.",
     "microsoft365": "Microsoft 365",
-    "microsoft365Note": "Planned connections for your company workspace.",
+    "microsoft365Note": "Your business workspace.",
     "outlook": "Outlook",
-    "outlookNote": "Planned calendar connections for appointments.",
-    "google": "Google Workspace / Google Calendar",
-    "googleNote": "Planned calendar connections for cleaning assignments."
+    "outlookNote": "Appointments in your calendar.",
+    "google": "Google Calendar",
+    "googleNote": "Cleaning schedules in sync.",
+    "teams": "Microsoft Teams",
+    "teamsNote": "Team communication, connected.",
+    "eyebrow": "YOUR EVERYDAY TOOLS",
+    "lead": "These integrations are planned. We’re building the connections that simplify your day."
   },
   "reportExport": {
     "openExport": "Export as…",

@@ -1764,7 +1764,10 @@
       }
     },
     "bookCall": "Gespräch mit uns vereinbaren",
-    "bookingUnavailable": "Die Terminbuchung kommt bald. Derzeit können noch keine Gespräche gebucht werden. Über das Formular oben können Sie weiterhin einen Testzugang anfragen."
+    "bookingUnavailable": "Die Terminbuchung kommt bald. Derzeit können noch keine Gespräche gebucht werden. Über das Formular oben können Sie weiterhin einen Testzugang anfragen.",
+    "animationPause": "Animation pausieren",
+    "animationPlay": "Animation abspielen",
+    "bookCallShort": "Gespräch buchen"
   },
   "periodPicker": {
     "last30Days": "Letzte 30 Tage",
@@ -1782,16 +1785,20 @@
     "invalid": "Bitte einen gültigen Zeitraum wählen. Das Enddatum darf nicht vor dem Startdatum liegen."
   },
   "integrations": {
-    "title": "Geplante Integrationen",
+    "title": "Ihre Tools. Ein vernetzter Arbeitstag.",
     "soon": "Demnächst",
     "microsoftSignIn": "Mit Microsoft anmelden",
     "signInNote": "Geschäftskonten von Microsoft 365 / Microsoft Entra ID sind geplant. Die Microsoft-Anmeldung ist noch nicht verfügbar.",
     "microsoft365": "Microsoft 365",
-    "microsoft365Note": "Geplante Anbindung Ihres Unternehmensarbeitsbereichs.",
+    "microsoft365Note": "Ihr Unternehmensarbeitsbereich.",
     "outlook": "Outlook",
-    "outlookNote": "Geplante Kalenderanbindung für Termine.",
-    "google": "Google Workspace / Google Calendar",
-    "googleNote": "Geplante Kalenderanbindung für Reinigungseinsätze."
+    "outlookNote": "Termine in Ihrem Kalender.",
+    "google": "Google Calendar",
+    "googleNote": "Reinigungseinsätze im Kalender.",
+    "teams": "Microsoft Teams",
+    "teamsNote": "Teamkommunikation vernetzen.",
+    "eyebrow": "IHRE VERTRAUTEN TOOLS",
+    "lead": "Diese Integrationen sind geplant. Für einen einfacheren Arbeitsalltag."
   },
   "reportExport": {
     "openExport": "Exportieren als…",

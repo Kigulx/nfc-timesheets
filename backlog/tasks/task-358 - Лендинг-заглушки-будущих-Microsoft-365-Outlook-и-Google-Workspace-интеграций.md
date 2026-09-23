@@ -5,7 +5,7 @@ status: Done
 assignee:
   - '@codex'
 created_date: '2026-09-23 18:22'
-updated_date: '2026-09-23 18:51'
+updated_date: '2026-09-23 19:16'
 labels:
   - web
   - landing
@@ -39,7 +39,15 @@ ordinal: 275000
 
 <!-- SECTION:PLAN:BEGIN -->
 Implement isolated changes with DE/EN strings, reuse existing calculations, verify UI and edge cases, review decisions and produce PDF.
+
+Owner visual revision: research Harvest/Connecteam; move branded integration cards including Teams directly after hero; bigger accessible type/buttons, DE/EN segmented control; replace symbols with SVG and fix looping animation with pause/reduced-motion; browser visual verification.
 <!-- SECTION:PLAN:END -->
+
+## Implementation Notes
+
+<!-- SECTION:NOTES:BEGIN -->
+Owner visual revision complete: Teams, Microsoft365, Outlook, GoogleCalendar local brandSVG cards immediately after hero. Explicit planned/Soon labels in DE/EN. Harvest and Connecteam inspected as design references. Placeholder contrast fixed. Four assets load in real browser; static checks, browser responsive QA and65-ADR review passed. Sources and handoff: docs/LANDING-VISUAL-REVISION.md.
+<!-- SECTION:NOTES:END -->
 
 ## Final Summary
 
