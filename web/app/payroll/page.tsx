@@ -11,6 +11,7 @@ import { ListPanel } from '@/components/ListPanel'
 import { LoadStatus } from '@/components/LoadStatus'
 import { PageHeader } from '@/components/PageHeader'
 import { PeriodPicker } from '@/components/PeriodPicker'
+import { ReportExport } from '@/components/ReportExport'
 import { type AdminSnapshot, ApiError, fetchPayrollSnapshot } from '@/lib/api'
 import { filterHref, periodLink, useFilters } from '@/lib/filters'
 import { type ErrorKey, htmlLang, isLocale } from '@/lib/locale'
@@ -210,7 +211,7 @@ export default function PayrollPage() {
    * filter reconciles and no object filter exports. Both facts are stated on screen in
    * `scopedNote`, and the filter is one click from removal.
    *
-   * ponytail: CEILING — a scoped payroll cannot be exported, so „send the accountant just
+   * ponytail: CEILING — a scoped payroll cannot be exported as CSV, so „send the accountant just
    * this building's hours" is still a manual job. UPGRADE PATH: a `location_id` on the
    * server's `hours` aggregate, which makes both the reconciliation and the export scopable
    * without a browser sum over a capped list. Not built now: `/admin/data` is the route
@@ -455,15 +456,31 @@ export default function PayrollPage() {
         title={t('heading')}
         question={t('question')}
         action={
-          /* NOT OFFERED WHILE SCOPED. A CSV named `payroll-2026-07.csv` that silently holds
+          /* CSV IS NOT OFFERED WHILE SCOPED. A CSV named `payroll-2026-07.csv` that silently holds
              one building's hours is indistinguishable from a complete payroll run in the
              folder the accountant keeps, and the file outlives the screen that explained
              it. The reason is stated below, next to the filter that caused it. */
-          totals !== null && totals.lines.length > 0 && !scoped ? (
-            <button type="button" className="btn btn-primary" onClick={downloadCsv}>
-              {t('exportCsv')}
-            </button>
-          ) : undefined
+          <div className="workspace-actions">
+            <ReportExport
+              snapshot={snapshot}
+              snapshotError={loadError !== null}
+              onRetry={() => void load()}
+              range={range}
+              selection={{
+                worker: filters.worker,
+                location: filters.location,
+                period,
+                start: filters.start,
+                end: filters.end,
+              }}
+              onChange={(next) => setFilters(next, 'replace')}
+            />
+            {totals !== null && totals.lines.length > 0 && !scoped ? (
+              <button type="button" className="btn btn-primary" onClick={downloadCsv}>
+                {t('exportCsv')}
+              </button>
+            ) : null}
+          </div>
         }
       />
 
@@ -753,7 +770,7 @@ export default function PayrollPage() {
                     ? t('caveatPhonesBlocked', { blocked: phones.blocked })
                     : null}
                 </li>
-              ) : phones !== null && phones.reported ? (
+              ) : phones?.reported ? (
                 <li>{t('caveatPhonesClear')}</li>
               ) : (
                 <li>{t('caveatPhonesUnknown')}</li>

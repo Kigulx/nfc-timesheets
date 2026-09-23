@@ -427,7 +427,7 @@ function sourceFiles(dir, out = []) {
 }
 
 const sources = SOURCE_DIRS.flatMap((dir) => sourceFiles(dir)).map((path) => ({
-  path,
+  path: path.replaceAll('\\', '/'),
   text: readFileSync(join(ROOT, path), 'utf8'),
 }))
 
@@ -461,7 +461,8 @@ check('every screen reads its filters through lib/filters.ts, never a raw parame
     // `/reinigung/` is a stated exception and not an admin screen: it is read by a person
     // who works for another company, it takes a TOKEN and no filter, and it deliberately
     // shares nothing with the admin — not the shell, not the nav, not this vocabulary.
-    .filter(({ path }) => !path.startsWith('app/reinigung/'))
+    // Home only forwards the complete bookmarked query to /map/ (decision-72).
+    .filter(({ path }) => !path.startsWith('app/reinigung/') && path !== 'app/page.tsx')
     .flatMap(({ path, text }) => {
       const reads = [...text.matchAll(/searchParams|URLSearchParams|window\.location\.search/g)]
       return reads.length === 0 ? [] : [`${path}: reads the query string directly`]
@@ -475,9 +476,7 @@ check('/login/ and /reinigung/ are still NOT linked from the admin', () => {
   // admin is a link a director can click into by accident and a URL that ends up in a
   // referrer. `/login/` is a redirect target and is reached through LOGIN_PATH.
   const offenders = sources.flatMap(({ path, text }) =>
-    path === 'lib/nav.ts' ||
-    path.startsWith('app/reinigung/') ||
-    path === join('app', 'welcome', 'page.tsx')
+    path === 'lib/nav.ts' || path.startsWith('app/reinigung/') || path === 'app/welcome/page.tsx'
       ? []
       : [...text.matchAll(/href=\{?["'`]\/(reinigung|login)\//g)].map(
           (match) => `${path}: href to /${match[1]}/`,

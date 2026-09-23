@@ -6,6 +6,7 @@ import { useFormatter, useTranslations } from 'next-intl'
 import { useCallback, useEffect, useState } from 'react'
 import { ConfirmModal } from '@/components/ConfirmModal'
 import { Drawer } from '@/components/Drawer'
+import { ScheduleCost } from '@/components/ScheduleCost'
 import { type PlanInput, ScheduleForm } from '@/components/ScheduleForm'
 import { ApiError, apiFetch, type Location, type Worker } from '@/lib/api'
 import { loginPathWithReturn } from '@/lib/nav'
@@ -234,6 +235,14 @@ export default function SchedulePage() {
             <strong>{t('count', { count: active.length })}</strong>
             <span>{t('timeZone')}</span>
           </div>
+          {!truncated && week ? (
+            <ScheduleCost
+              assignments={visible}
+              workers={workers}
+              from={dayStart(week)}
+              to={dayStart(calendarDay(week, 7))}
+            />
+          ) : null}
           {truncated ? <p className="form-error">{t('truncated')}</p> : null}
           {workers.every((w) => !w.active) || locations.every((l) => !l.active) ? (
             <p className="workspace-callout">
