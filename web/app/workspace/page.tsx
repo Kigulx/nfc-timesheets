@@ -2,8 +2,9 @@
 
 import Link from 'next/link'
 import { useFormatter, useTranslations } from 'next-intl'
+import { PeriodPicker } from '@/components/PeriodPicker'
 import { useWorkspace } from '@/components/useWorkspace'
-import { filterHref, useFilters } from '@/lib/filters'
+import { filterHref, periodLink, useFilters } from '@/lib/filters'
 import { completedSetup } from '@/lib/workspaces'
 
 export default function WorkspacePage() {
@@ -11,8 +12,9 @@ export default function WorkspacePage() {
   const errors = useTranslations('error')
   const format = useFormatter()
   const [filters, setFilters] = useFilters()
-  const period = filters.period === 'lastMonth' ? 'lastMonth' : 'thisMonth'
-  const { data, error, loading, reload } = useWorkspace(period)
+  const period = filters.period !== null && filters.period !== 'all' ? filters.period : 'thisMonth'
+  const carriedPeriod = periodLink(filters, period)
+  const { data, error, loading, reload } = useWorkspace(period, filters.start, filters.end)
   const money = (cents: number) =>
     format.number(cents / 100, { style: 'currency', currency: 'EUR' })
   const hours = (minutes: number) => format.number(minutes / 60, { maximumFractionDigits: 1 })
@@ -25,20 +27,11 @@ export default function WorkspacePage() {
           <p className="lede">{t('intro')}</p>
         </div>
         <div className="workspace-actions">
-          <label htmlFor="workspace-period">{t('period')}</label>
-          <select
-            id="workspace-period"
-            value={period}
-            onChange={(e) =>
-              setFilters(
-                { period: e.target.value === 'lastMonth' ? 'lastMonth' : 'thisMonth' },
-                'push',
-              )
-            }
-          >
-            <option value="thisMonth">{t('thisMonth')}</option>
-            <option value="lastMonth">{t('lastMonth')}</option>
-          </select>
+          <PeriodPicker
+            label={t('period')}
+            value={{ period, start: filters.start, end: filters.end }}
+            onChange={(selection) => setFilters(selection, 'replace')}
+          />
           <button className="btn btn-ghost" type="button" onClick={reload} disabled={loading}>
             {t('refresh')}
           </button>
@@ -62,12 +55,15 @@ export default function WorkspacePage() {
             </section>
           )}
           <section className="workspace-metrics" aria-label={t('monthSummary')}>
-            <Link className="workspace-card" href={filterHref('/shifts/', { period, state: null })}>
+            <Link
+              className="workspace-card"
+              href={filterHref('/shifts/', { ...carriedPeriod, state: null })}
+            >
               <span>{t('acceptedHours')}</span>
               <strong>{hours(data.workers.reduce((sum, row) => sum + row.minutes, 0))}</strong>
               <small>{t('hoursUnit')}</small>
             </Link>
-            <Link className="workspace-card" href={filterHref('/payroll/', { period })}>
+            <Link className="workspace-card" href={filterHref('/payroll/', carriedPeriod)}>
               <span>{t('estimatedAccrual')}</span>
               <strong>
                 {money(data.workers.reduce((sum, row) => sum + row.estimated_cents, 0))}
@@ -147,7 +143,7 @@ export default function WorkspacePage() {
           <section className="workspace-panel">
             <div className="workspace-heading">
               <h2>{t('workerCosts')}</h2>
-              <Link className="link" href={filterHref('/payroll/', { period })}>
+              <Link className="link" href={filterHref('/payroll/', carriedPeriod)}>
                 {t('openCalculations')}
               </Link>
             </div>
@@ -167,7 +163,7 @@ export default function WorkspacePage() {
                     {data.workers.map((row) => (
                       <tr key={row.id}>
                         <td>
-                          <Link href={filterHref('/shifts/', { period, worker: row.id })}>
+                          <Link href={filterHref('/shifts/', { ...carriedPeriod, worker: row.id })}>
                             {row.name}
                           </Link>
                         </td>
@@ -232,7 +228,7 @@ export default function WorkspacePage() {
           <nav className="workspace-actions" aria-label={t('more')}>
             <Link href="/setup/">{t('setupTitle')}</Link>
             <Link href="/clients/">{t('clients')}</Link>
-            <Link href={filterHref('/pl/', { period })}>{t('profitability')}</Link>
+            <Link href={filterHref('/pl/', carriedPeriod)}>{t('profitability')}</Link>
           </nav>
         </>
       )}

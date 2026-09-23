@@ -130,6 +130,10 @@ export default function DashboardPage() {
    * static export. Read from the URL, so the panel can be bookmarked and sent to somebody.
    */
   const [filters, setFilters] = useFilters()
+  const reportPeriod =
+    filters.period === 'custom' && filters.start && filters.end
+      ? { period: 'custom' as const, start: filters.start, end: filters.end }
+      : null
   /**
    * The open-material count the panel needs, fetched ONCE, LAZILY, on the first time a
    * panel is opened. Not on page load: the dashboard is the screen the director leaves open
@@ -543,6 +547,7 @@ export default function DashboardPage() {
               return (
                 <BuildingFacts
                   building={building}
+                  reportPeriod={reportPeriod}
                   shifts={snapshot.shifts}
                   zones={snapshot.zones}
                   openMaterials={openMaterials === null ? null : (openMaterials[id] ?? 0)}
@@ -742,6 +747,7 @@ export default function DashboardPage() {
           screen together saying the same thing twice. */}
       <BuildingPanel
         building={panelOnMap ? null : panelBuilding}
+        reportPeriod={reportPeriod}
         shifts={snapshot?.shifts ?? []}
         zones={snapshot?.zones ?? []}
         openMaterials={

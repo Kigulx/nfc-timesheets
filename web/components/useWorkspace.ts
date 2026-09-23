@@ -8,7 +8,11 @@ import { loginPathWithReturn } from '@/lib/nav'
 import type { Period } from '@/lib/period'
 import { fetchWorkspace, type Workspace } from '@/lib/workspaces'
 
-export function useWorkspace(period: Period = 'thisMonth') {
+export function useWorkspace(
+  period: Period = 'thisMonth',
+  start: string | null = null,
+  end: string | null = null,
+) {
   const router = useRouter()
   const [data, setData] = useState<Workspace | null>(null)
   const [error, setError] = useState<ErrorKey | null>(null)
@@ -21,7 +25,7 @@ export function useWorkspace(period: Period = 'thisMonth') {
     const controller = new AbortController()
     setLoading(true)
     setError(null)
-    void fetchWorkspace(period, controller.signal)
+    void fetchWorkspace(period, start && end ? { start, end } : undefined, controller.signal)
       .then(setData)
       .catch((cause) => {
         if (controller.signal.aborted) return
@@ -32,6 +36,6 @@ export function useWorkspace(period: Period = 'thisMonth') {
         if (!controller.signal.aborted) setLoading(false)
       })
     return () => controller.abort()
-  }, [period, router, revision])
+  }, [period, start, end, router, revision])
   return { data, error, loading, reload }
 }

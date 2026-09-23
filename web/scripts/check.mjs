@@ -501,9 +501,8 @@ registerHooks({
   },
 })
 
-const { businessMidnight, futureDays, isPartElapsed, periodRange, withinRange } = await import(
-  pathToFileURL(join(ROOT, 'lib/period.ts')).href
-)
+const { businessMidnight, calendarRange, futureDays, isPartElapsed, periodRange, withinRange } =
+  await import(pathToFileURL(join(ROOT, 'lib/period.ts')).href)
 
 const { NAV_GROUPS, OFF_NAV_ROUTES } = await import(pathToFileURL(join(ROOT, 'lib/nav.ts')).href)
 
@@ -544,9 +543,8 @@ check('every route that left the sidebar keeps a way in (decision-39)', () => {
 // silently shows the wrong object's data. This project has returned a 500 for a malformed
 // URL once already.
 
-const { EMPTY_FILTERS, FILTER_KEYS, filterHref, filterQuery, parseFilters } = await import(
-  pathToFileURL(join(ROOT, 'lib/filters.ts')).href
-)
+const { EMPTY_FILTERS, FILTER_KEYS, filterHref, filterQuery, parseFilters, periodLink } =
+  await import(pathToFileURL(join(ROOT, 'lib/filters.ts')).href)
 
 check('lib/filters.ts: a hand-typed or stale URL degrades, never throws', () => {
   const junk = [
@@ -594,6 +592,8 @@ check('lib/filters.ts: every well-formed value survives a round trip', () => {
     client: 3,
     shift: 41,
     period: 'lastMonth',
+    start: null,
+    end: null,
     state: 'unresolved',
     status: 'open',
     open: uuid,
@@ -657,12 +657,50 @@ check('lib/filters.ts: period ids are lib/period.ts ids, verbatim', () => {
   // The defect this contract removes is a link that says one month and opens another. It
   // returns the moment these two vocabularies drift.
   for (const period of PERIODS) {
+    if (period === 'custom') continue
     assert.equal(parseFilters(`?period=${period}`).period, period, `${period} must round-trip`)
   }
   assert.deepEqual(
     FILTER_KEYS.filter((key) => key === 'period'),
     ['period'],
   )
+})
+
+check('custom dates survive URL and cross-links, invalid dates fall back safely', () => {
+  const selected = parseFilters(
+    '?location=729b9c2a-98e2-4fb6-91d1-889fc8b561cc&period=custom&start=2026-10-24&end=2026-10-26',
+  )
+  assert.equal(selected.period, 'custom')
+  assert.equal(selected.start, '2026-10-24')
+  assert.equal(selected.end, '2026-10-26')
+  assert.deepEqual(parseFilters(filterQuery(selected)), selected)
+  assert.deepEqual(parseFilters(filterQuery(periodLink(selected, 'custom'))).period, 'custom')
+  assert.equal(filterQuery(periodLink(selected, 'thisWeek')), '?period=thisWeek')
+  for (const search of [
+    '?period=custom',
+    '?period=custom&start=2026-02-30&end=2026-03-01',
+    '?period=custom&start=2026-11-02&end=2026-11-01',
+    '?period=custom&start=2026-10-24',
+  ])
+    assert.deepEqual(parseFilters(search), EMPTY_FILTERS)
+})
+
+check('calendar range and Monday weeks preserve Vienna midnights across DST', () => {
+  const range = calendarRange({ start: '2026-10-24', end: '2026-10-26' })
+  assert.deepEqual(range, { from: '2026-10-23T22:00:00.000Z', to: '2026-10-26T23:00:00.000Z' })
+  assert.equal(Date.parse(range.to) - Date.parse(range.from), 73 * 3_600_000)
+  assert.ok(withinRange('2026-10-26T22:59:59Z', range))
+  assert.ok(!withinRange('2026-10-26T23:00:00Z', range))
+  const sunday = new Date('2026-10-25T12:00:00Z')
+  assert.deepEqual(periodRange('thisWeek', sunday), {
+    from: '2026-10-18T22:00:00.000Z',
+    to: '2026-10-25T23:00:00.000Z',
+  })
+  assert.deepEqual(periodRange('lastWeek', sunday), {
+    from: '2026-10-11T22:00:00.000Z',
+    to: '2026-10-18T22:00:00.000Z',
+  })
+  assert.deepEqual(periodRange('custom', sunday, { start: '2026-10-24', end: '2026-10-26' }), range)
 })
 
 check('lib/period.ts: a period boundary is Vienna midnight, not UTC midnight', () => {

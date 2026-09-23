@@ -167,7 +167,10 @@
     "geoNoPin": "{name}: Google hat keine brauchbare Koordinate geliefert ({status}). Das Objekt bleibt in der Liste.",
     "geoNoAddress": "{name} hat keine Adresse hinterlegt. Ohne Adresse gibt es nichts zu geokodieren.",
     "geoFailed": "{name}: Die Abfrage ist fehlgeschlagen. Das Objekt bleibt in der Liste.",
-    "panelLinkOwnerReport": "Bericht für Eigentümer · Link teilen"
+    "panelLinkOwnerReport": "Bericht für Eigentümer · Link teilen",
+    "panelLinkShiftsCustom": "Schichten dieses Objekts · {start} bis {end}",
+    "panelLinkPayrollCustom": "Lohn · nur Stunden in diesem Objekt · {start} bis {end}",
+    "panelLinkPlCustom": "Ergebnis dieses Objekts · {start} bis {end}"
   },
   "payroll": {
     "heading": "Lohnabrechnung",
@@ -240,7 +243,10 @@
     "scopedNote": "Solange ein Filter aktiv ist, werden weder der Serverabgleich noch der CSV-Export angeboten: beide gelten immer für den ganzen Zeitraum, und eine gefilterte Datei sähe wie eine vollständige Lohnliste aus.",
     "scopedBuildingLink": "Objektpanel öffnen",
     "openWorker": "Mitarbeiterpanel öffnen",
-    "csvTotalExcluded": "{count, plural, one {# Schicht ist in dieser Summe nicht enthalten: ihre Endzeit ist nicht bestätigt oder sie läuft noch.} other {# Schichten sind in dieser Summe nicht enthalten: ihre Endzeiten sind nicht bestätigt oder sie laufen noch.}}"
+    "csvTotalExcluded": "{count, plural, one {# Schicht ist in dieser Summe nicht enthalten: ihre Endzeit ist nicht bestätigt oder sie läuft noch.} other {# Schichten sind in dieser Summe nicht enthalten: ihre Endzeiten sind nicht bestätigt oder sie laufen noch.}}",
+    "periodThisWeek": "Diese Woche",
+    "periodLastWeek": "Vorige Woche",
+    "periodCustom": "Eigene Daten"
   },
   "login": {
     "heading": "Anmelden",
@@ -756,7 +762,10 @@
     "linkedShiftMissing": "Die verlinkte Schicht ist in den geladenen Daten nicht vorhanden. Möglicherweise wurde sie inzwischen korrigiert.",
     "openWorker": "Mitarbeiterpanel öffnen",
     "openLocation": "Objektpanel öffnen",
-    "allStates": "Alle Zustände"
+    "allStates": "Alle Zustände",
+    "periodThisWeek": "Diese Woche",
+    "periodLastWeek": "Vorige Woche",
+    "periodCustom": "Eigene Daten"
   },
   "inventory": {
     "heading": "Produkte & Geräte",
@@ -1054,7 +1063,10 @@
     "methodNotEntered": "{buildings, plural, one {Für # Objekt ist in diesem Zeitraum kein Umsatz eingetragen} other {Für # Objekte ist in diesem Zeitraum kein Umsatz eingetragen}}. Der Umsatz ist unbekannt, nicht null; diese Objekte tragen {cost} an Kosten ohne bekannte Einnahmen und bleiben aus der Gesamtsumme draußen. Der Umsatz wird oben unter „Umsatz erfassen“ eingetragen.",
     "methodUnzoned": "{buildings, plural, one {Für # Objekt ist noch keine Zone angelegt} other {Für # Objekte ist noch keine Zone angelegt}}. Das ändert nichts an den Zahlen und nichts am Tag: Der Tag an diesem Objekt startet weiterhin eine Schicht. Es fehlt nur die Fläche und damit jede Angabe je m².",
     "methodUnzonedLink": "Zonen anlegen",
-    "methodPerZoneRefused": "Es gibt bewusst keine Kosten je Zone. Eine Schicht gehört zum Objekt, nicht zur Zone; eine Aufteilung nach Fläche würde behaupten, Zeit sei proportional zur Fläche – eine Tiefgarage geht je m² schnell, ein Bürogeschoß langsam."
+    "methodPerZoneRefused": "Es gibt bewusst keine Kosten je Zone. Eine Schicht gehört zum Objekt, nicht zur Zone; eine Aufteilung nach Fläche würde behaupten, Zeit sei proportional zur Fläche – eine Tiefgarage geht je m² schnell, ein Bürogeschoß langsam.",
+    "periodThisWeek": "Diese Woche",
+    "periodLastWeek": "Vorige Woche",
+    "periodCustom": "Eigene Daten"
   },
   "contracts": {
     "heading": "Vertragsverwaltung",
@@ -1220,7 +1232,10 @@
     "answerNoTargetSub": "Kein Vertrag mit vereinbarter Zeit",
     "answerBuildings": "Objekte",
     "answerPinnedSub": "{pinned, plural, =0 {keines auf der Karte} one {# auf der Karte} other {# auf der Karte}}",
-    "panelObjectLink": "Objektpanel öffnen"
+    "panelObjectLink": "Objektpanel öffnen",
+    "periodThisWeek": "Diese Woche",
+    "periodLastWeek": "Vorige Woche",
+    "periodCustom": "Eigene Daten"
   },
   "operators": {
     "heading": "Betreiber",
@@ -1463,7 +1478,7 @@
     "setupTitle": "Einfache Einrichtung",
     "setupProgress": "{count, plural, one {# von 4 Schritten abgeschlossen.} other {# von 4 Schritten abgeschlossen.}} Machen Sie dort weiter, wo Sie aufgehört haben.",
     "continueSetup": "Einrichtung fortsetzen",
-    "monthSummary": "Monatsübersicht",
+    "monthSummary": "Zeitraumübersicht",
     "acceptedHours": "Bestätigte Stunden",
     "hoursUnit": "Stunden im gewählten Zeitraum",
     "estimatedAccrual": "Geschätzte Vergütung",
@@ -1473,7 +1488,7 @@
     "materialHint": "Bekannte Kosten nach Bestelldatum",
     "estimateHint": "Die Vergütung ist eine Schätzung aus abgeschlossenen, geklärten Schichten und aktuellen Stundensätzen. Sie zeigt weder Auszahlungen noch einen offenen Zahlbetrag.",
     "today": "Jetzt zu erledigen",
-    "todayHint": "Aktueller Stand, unabhängig vom gewählten Monat.",
+    "todayHint": "Aktueller Stand, unabhängig vom gewählten Zeitraum.",
     "clockedIn": "Offene Schichten",
     "needsReview": "Schichten zur Klärung",
     "materialQueue": "Neue Materialanfragen",
@@ -1569,7 +1584,7 @@
     "renewInvite": "Neue Einladung erstellen",
     "renewFailed": "Die Einladung konnte nicht erneuert werden. Möglicherweise wurde sie bereits eingelöst.",
     "manageAllMaterials": "Alle Materialanfragen verwalten",
-    "materialListHint": "Die 20 neuesten Bestellungen im gewählten Monat. Die Summe oben umfasst alle Bestellungen dieses Zeitraums.",
+    "materialListHint": "Die 20 neuesten Bestellungen im gewählten Zeitraum. Die Summe oben umfasst alle Bestellungen dieses Zeitraums.",
     "noOrders": "In diesem Zeitraum wurden noch keine Materialien bestellt.",
     "materialOrder": "Bestellung",
     "orderDate": "Bestellt am",
@@ -1659,5 +1674,20 @@
     "inboxLanguage": "Sprache",
     "inboxReceived": "Eingegangen",
     "inboxLimit": "Die letzten 200 Anfragen werden angezeigt."
+  },
+  "periodPicker": {
+    "last30Days": "Letzte 30 Tage",
+    "thisWeek": "Diese Woche",
+    "lastWeek": "Vorige Woche",
+    "thisMonth": "Dieser Monat",
+    "lastMonth": "Voriger Monat",
+    "thisQuarter": "Dieses Quartal",
+    "thisYear": "Dieses Jahr",
+    "custom": "Eigene Daten",
+    "all": "Alles Erfasste",
+    "start": "Von",
+    "end": "Bis einschließlich",
+    "apply": "Zeitraum anwenden",
+    "invalid": "Bitte einen gültigen Zeitraum wählen. Das Enddatum darf nicht vor dem Startdatum liegen."
   }
 }

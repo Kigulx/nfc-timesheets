@@ -3,16 +3,16 @@
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useFormatter, useLocale, useTranslations } from 'next-intl'
-import { useCallback, useEffect, useId, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { AnswerBand } from '@/components/AnswerBand'
 import { EmptyState } from '@/components/EmptyState'
-import { Field } from '@/components/Field'
 import { FilterChips } from '@/components/FilterChips'
 import { ListPanel } from '@/components/ListPanel'
 import { LoadStatus } from '@/components/LoadStatus'
 import { PageHeader } from '@/components/PageHeader'
+import { PeriodPicker } from '@/components/PeriodPicker'
 import { type AdminSnapshot, ApiError, fetchPayrollSnapshot } from '@/lib/api'
-import { filterHref, useFilters } from '@/lib/filters'
+import { filterHref, periodLink, useFilters } from '@/lib/filters'
 import { type ErrorKey, htmlLang, isLocale } from '@/lib/locale'
 import { centsToPlainEuros } from '@/lib/money'
 import { loginPathWithReturn } from '@/lib/nav'
@@ -27,7 +27,7 @@ import {
   reconcile,
   toCsv,
 } from '@/lib/payroll'
-import { isPeriod, PAYROLL_PERIODS, type Period, periodContaining, periodRange } from '@/lib/period'
+import { type Period, periodContaining, periodRange } from '@/lib/period'
 import { toBusinessInput } from '@/lib/shifts'
 
 /**
@@ -133,8 +133,6 @@ export default function PayrollPage() {
   )
   const router = useRouter()
 
-  const periodId = useId()
-
   // null = still loading. Never rendered as "no hours yet".
   const [snapshot, setSnapshot] = useState<AdminSnapshot | null>(null)
   const [loadError, setLoadError] = useState<ErrorKey | null>(null)
@@ -156,7 +154,15 @@ export default function PayrollPage() {
   const [exportFailed, setExportFailed] = useState(false)
   // Frozen at mount: "this month" must not change meaning halfway through a re-render.
   const [now] = useState(() => new Date())
-  const range = useMemo(() => periodRange(period, now), [period, now])
+  const range = useMemo(
+    () =>
+      periodRange(
+        period,
+        now,
+        filters.start && filters.end ? { start: filters.start, end: filters.end } : undefined,
+      ),
+    [period, now, filters.start, filters.end],
+  )
 
   const handleAuthLoss = useCallback(
     (cause: unknown): boolean => {
@@ -285,10 +291,13 @@ export default function PayrollPage() {
   // computed key would defeat the check that catches a typo at build time.
   const periodLabel: Record<Period, string> = {
     last30Days: t('periodLast30Days'),
+    thisWeek: t('periodThisWeek'),
+    lastWeek: t('periodLastWeek'),
     thisMonth: t('periodThisMonth'),
     lastMonth: t('periodLastMonth'),
     thisQuarter: t('periodThisQuarter'),
     thisYear: t('periodThisYear'),
+    custom: t('periodCustom'),
     all: t('periodAll'),
   }
 
@@ -507,7 +516,12 @@ export default function PayrollPage() {
           {scopedLocationName === null ? null : (
             <p>
               {t('scopedLocation', { name: scopedLocationName })}{' '}
-              <Link href={filterHref(HOME_PATH, { location: filters.location })}>
+              <Link
+                href={filterHref(HOME_PATH, {
+                  location: filters.location,
+                  ...periodLink(filters, period),
+                })}
+              >
                 {t('scopedBuildingLink')}
               </Link>
             </p>
@@ -563,23 +577,16 @@ export default function PayrollPage() {
       )}
 
       <div className="filter-bar">
-        <Field id={periodId} label={t('fieldPeriod')} help={rangeLabel}>
-          <select
-            value={period}
-            onChange={(event) => {
-              const next = event.target.value
-              if (isPeriod(next)) setPeriod(next)
-              setExported(false)
-              setExportFailed(false)
-            }}
-          >
-            {PAYROLL_PERIODS.map((option) => (
-              <option key={option} value={option}>
-                {periodLabel[option]}
-              </option>
-            ))}
-          </select>
-        </Field>
+        <PeriodPicker
+          label={t('fieldPeriod')}
+          help={rangeLabel}
+          value={{ period, start: filters.start, end: filters.end }}
+          onChange={(selection) => {
+            setFilters(selection, 'replace')
+            setExported(false)
+            setExportFailed(false)
+          }}
+        />
       </div>
 
       {/* A FAILED LOAD MUST NOT GO ON SAYING "loading". This branch is reached whenever the
@@ -649,7 +656,7 @@ export default function PayrollPage() {
                   {t('caveatUnresolved', { count: totals.unresolvedShifts })}{' '}
                   <Link
                     href={filterHref(SHIFTS_PATH, {
-                      period,
+                      ...periodLink(filters, period),
                       state: 'unresolved',
                       location: filters.location,
                       worker: filters.worker,
@@ -664,7 +671,7 @@ export default function PayrollPage() {
                   {t('caveatOpen', { count: totals.openShifts })}{' '}
                   <Link
                     href={filterHref(SHIFTS_PATH, {
-                      period,
+                      ...periodLink(filters, period),
                       state: 'open',
                       location: filters.location,
                       worker: filters.worker,
@@ -706,7 +713,7 @@ export default function PayrollPage() {
                   {t('caveatManual', { count: totals.manualShifts })}{' '}
                   <Link
                     href={filterHref(SHIFTS_PATH, {
-                      period,
+                      ...periodLink(filters, period),
                       state: 'manual',
                       location: filters.location,
                       worker: filters.worker,

@@ -1265,6 +1265,27 @@ a {
   margin-bottom: 0;
 }
 
+.period-picker {
+  min-width: min(100%, 13rem);
+}
+
+.period-picker-dates {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: var(--s2);
+}
+
+.period-picker-dates label {
+  display: grid;
+  gap: var(--s1);
+  flex: 1 1 9rem;
+}
+
+.period-picker-dates .btn {
+  min-height: 44px;
+}
+
 .roster-filters .field:first-child {
   flex: 1 1 16rem;
 }

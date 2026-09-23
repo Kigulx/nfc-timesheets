@@ -1,5 +1,5 @@
 import { apiFetch } from '@/lib/api'
-import { type Period, periodRange, rangeQuery } from '@/lib/period'
+import { type CalendarRange, type Period, periodRange, rangeQuery } from '@/lib/period'
 
 export type AdminAccount = {
   id: number
@@ -49,8 +49,10 @@ export type ManagedWorkspace = {
 }
 export const fetchAccount = (signal?: AbortSignal) =>
   apiFetch<{ admin: AdminAccount }>('/admin/session', { signal })
-export const fetchWorkspace = (period: Period, signal?: AbortSignal) =>
-  apiFetch<Workspace>(`/admin/workspace?${rangeQuery(periodRange(period, new Date()))}`, { signal })
+export const fetchWorkspace = (period: Period, custom?: CalendarRange, signal?: AbortSignal) =>
+  apiFetch<Workspace>(`/admin/workspace?${rangeQuery(periodRange(period, new Date(), custom))}`, {
+    signal,
+  })
 export const fetchManagedWorkspaces = () =>
   apiFetch<{ workspaces: ManagedWorkspace[] }>('/platform/workspaces')
 export const provisionWorkspace = (body: {

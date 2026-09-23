@@ -167,7 +167,10 @@
     "geoNoPin": "{name}: Google returned no usable coordinate ({status}). The building stays in the list.",
     "geoNoAddress": "{name} has no address on file. Without an address there is nothing to geocode.",
     "geoFailed": "{name}: the request failed. The building stays in the list.",
-    "panelLinkOwnerReport": "Owner report · share link"
+    "panelLinkOwnerReport": "Owner report · share link",
+    "panelLinkShiftsCustom": "This building’s shifts · {start} to {end}",
+    "panelLinkPayrollCustom": "Payroll · only hours in this building · {start} to {end}",
+    "panelLinkPlCustom": "This building’s P&L · {start} to {end}"
   },
   "payroll": {
     "heading": "Payroll",
@@ -240,7 +243,10 @@
     "scopedNote": "While a filter is active neither the server reconciliation nor the CSV export is offered: both always describe the whole period, and a filtered file would look like a complete payroll run.",
     "scopedBuildingLink": "Open building panel",
     "openWorker": "Open worker panel",
-    "csvTotalExcluded": "{count, plural, one {# shift is not in this total: its end time is unconfirmed, or it is still running.} other {# shifts are not in this total: their end times are unconfirmed, or they are still running.}}"
+    "csvTotalExcluded": "{count, plural, one {# shift is not in this total: its end time is unconfirmed, or it is still running.} other {# shifts are not in this total: their end times are unconfirmed, or they are still running.}}",
+    "periodThisWeek": "This week",
+    "periodLastWeek": "Last week",
+    "periodCustom": "Custom dates"
   },
   "login": {
     "heading": "Sign in",
@@ -756,7 +762,10 @@
     "linkedShiftMissing": "The linked shift is not in the loaded data. It may have been corrected in the meantime.",
     "openWorker": "Open worker panel",
     "openLocation": "Open building panel",
-    "allStates": "All states"
+    "allStates": "All states",
+    "periodThisWeek": "This week",
+    "periodLastWeek": "Last week",
+    "periodCustom": "Custom dates"
   },
   "inventory": {
     "heading": "Products & Equipment",
@@ -1054,7 +1063,10 @@
     "methodNotEntered": "{buildings, plural, one {# building has no revenue entered for this period} other {# buildings have no revenue entered for this period}}. Their revenue is unknown, not zero; they carry {cost} of cost with no known income and stay out of the total. Enter it under “Enter revenue” above.",
     "methodUnzoned": "{buildings, plural, one {# building has no zone on file yet} other {# buildings have no zone on file yet}}. That changes none of these numbers and nothing about the tag: tapping the tag at that building still starts a shift. What is missing is the area, and with it everything per m².",
     "methodUnzonedLink": "Add zones",
-    "methodPerZoneRefused": "There is deliberately no cost per zone. A shift belongs to the building, not to a zone; splitting it by floor area would assert that time is proportional to area – an underground car park is fast per m² and an office floor is slow."
+    "methodPerZoneRefused": "There is deliberately no cost per zone. A shift belongs to the building, not to a zone; splitting it by floor area would assert that time is proportional to area – an underground car park is fast per m² and an office floor is slow.",
+    "periodThisWeek": "This week",
+    "periodLastWeek": "Last week",
+    "periodCustom": "Custom dates"
   },
   "contracts": {
     "heading": "Contract management",
@@ -1220,7 +1232,10 @@
     "answerNoTargetSub": "No contract with an agreed time",
     "answerBuildings": "Buildings",
     "answerPinnedSub": "{pinned, plural, =0 {none on the map} one {# on the map} other {# on the map}}",
-    "panelObjectLink": "Open building panel"
+    "panelObjectLink": "Open building panel",
+    "periodThisWeek": "This week",
+    "periodLastWeek": "Last week",
+    "periodCustom": "Custom dates"
   },
   "operators": {
     "heading": "Operators",
@@ -1463,7 +1478,7 @@
     "setupTitle": "Easy setup",
     "setupProgress": "{count, plural, one {# of 4 steps complete.} other {# of 4 steps complete.}} Pick up where you left off.",
     "continueSetup": "Continue setup",
-    "monthSummary": "Monthly overview",
+    "monthSummary": "Period overview",
     "acceptedHours": "Confirmed hours",
     "hoursUnit": "hours in the selected period",
     "estimatedAccrual": "Estimated pay",
@@ -1473,7 +1488,7 @@
     "materialHint": "Known costs by order date",
     "estimateHint": "Pay is estimated from completed, resolved shifts and current hourly rates. It does not show payments or an outstanding balance.",
     "today": "Needs attention now",
-    "todayHint": "Current status, independent of the selected month.",
+    "todayHint": "Current status, independent of the selected period.",
     "clockedIn": "Open shifts",
     "needsReview": "Shifts needing review",
     "materialQueue": "New material requests",
@@ -1569,7 +1584,7 @@
     "renewInvite": "Create new invitation",
     "renewFailed": "The invitation could not be renewed. It may already have been redeemed.",
     "manageAllMaterials": "Manage all material requests",
-    "materialListHint": "The 20 most recent orders in the selected month. The total above includes every order in that period.",
+    "materialListHint": "The 20 most recent orders in the selected period. The total above includes every order in that period.",
     "noOrders": "No materials ordered in this period yet.",
     "materialOrder": "Order",
     "orderDate": "Ordered on",
@@ -1659,5 +1674,20 @@
     "inboxLanguage": "Language",
     "inboxReceived": "Received",
     "inboxLimit": "Showing the latest 200 requests."
+  },
+  "periodPicker": {
+    "last30Days": "Last 30 days",
+    "thisWeek": "This week",
+    "lastWeek": "Last week",
+    "thisMonth": "This month",
+    "lastMonth": "Last month",
+    "thisQuarter": "This quarter",
+    "thisYear": "This year",
+    "custom": "Custom dates",
+    "all": "Everything recorded",
+    "start": "From",
+    "end": "Through",
+    "apply": "Apply dates",
+    "invalid": "Choose a valid range with the end on or after the start."
   }
 }
