@@ -369,7 +369,7 @@ private fun Chevron() {
  *
  * Reached from TWO places and composed the same way from both: [SignInScreen]'s five-tap
  * version row, for a phone that is an operator's and nothing else, and [SettingsScreen]'s
- * visible row, for a worker who is already signed in and must NOT have to sign out to write
+ * five-tap version row, for a worker who is already signed in and must NOT have to sign out to write
  * or test a card. That
  * second door is the audit's B3: before it, a signed-in worker's only operator entry was
  * an item on the idle log list, which is not there at all on a phone whose NFC is off — so
@@ -2394,6 +2394,7 @@ private fun HistoryScreen(model: TimeSheetViewModel) {
 
 @Composable
 private fun SettingsScreen(model: TimeSheetViewModel, openIntent: (Intent) -> Unit, onOperator: () -> Unit) {
+    var versionTapCount by rememberSaveable { mutableStateOf(0) }
     val worker = (model.session.collectAsStateWithLifecycle().value as? SessionState.SignedIn)?.worker
 
     var showMyHours by rememberSaveable { mutableStateOf(false) }
@@ -2437,11 +2438,6 @@ private fun SettingsScreen(model: TimeSheetViewModel, openIntent: (Intent) -> Un
             }
         }
         LanguagePicker()
-        Card(Modifier.fillMaxWidth()) {
-            Column(Modifier.padding(horizontal = 16.dp)) {
-                RowLink(stringResource(R.string.settings_operator_open), onOperator)
-            }
-        }
 
         HorizontalDivider()
         RevealSection(label = { Text(stringResource(R.string.settings_push_title)) }) { PushSection(model) }
@@ -2459,16 +2455,21 @@ private fun SettingsScreen(model: TimeSheetViewModel, openIntent: (Intent) -> Un
             )
         }
 
-        // TASK-253: a plain version line, visible without any dev tooling -- the whole
-        // point is turning "which build is this phone running" from a log dive into a
-        // 30-second glance. NOT tied to self-update in any way (that mechanism is gone;
-        // Play Store owns delivery now) -- this is the same one-line, non-interactive
-        // fact iOS's SettingsView shows via Bundle.main.infoDictionary.
+        // The same specialist entry as sign-in: five version taps, then operator auth.
         HorizontalDivider()
         Text(
             stringResource(R.string.app_version_line, BuildConfig.VERSION_NAME, BuildConfig.VERSION_CODE),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(min = 48.dp)
+                .clickable(role = Role.Button) {
+                    val result = VersionTapGate.advance(versionTapCount)
+                    versionTapCount = result.tapCount
+                    if (result.openOperator) onOperator()
+                }
+                .padding(vertical = 12.dp),
         )
     }
 }

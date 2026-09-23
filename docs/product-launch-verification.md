@@ -40,6 +40,8 @@ cancelled it through the confirmation dialog. PostgreSQL showed versions 1, 2, 3
 correct UTC equivalents of Vienna inputs. A competing overlapping assignment displayed
 the specific refusal and created no row. Worker filter, next/previous week, empty week,
 This week and Refresh were driven through the UI. Cancellation leaves visible history.
+The saved notice now re-translates immediately when switching German/English; this was
+verified in the browser after a successful save and a fresh production build.
 
 ## Real Android emulator journey
 
@@ -65,3 +67,22 @@ Screenshots and the Russian visual report are local regenerable artifacts under
 company branding was not replaced. No production migration, deployment, Play release,
 push, PR or merge was performed. Physical NFC taps cannot be tested by this emulator.
 New NFC scan animations and iOS scheduling remain outside this iteration.
+
+## Follow-up Android fixes (TASK-346)
+
+The user caught a direct operator-tools row in signed-in Settings. It is removed;
+Settings now uses the same five-tap version entry as the signed-out screen, followed
+by the unchanged separate operator-authentication gate. The focused JVM
+`version-tap-gate-check` passes and the debug APK builds successfully.
+The emulator verified no ordinary Settings row, four taps staying on Settings, the
+fifth opening the operator screen, Back retaining the worker session, and the
+signed-out fifth tap opening the operator-code form.
+
+The account-switch walkthrough also exposed another worker's local Recent records.
+Local history queries, tap open-shift lookup and boot notification recovery now use
+the current worker ID. Account changes clear rendered state; asynchronous local reads
+check the current identity before publishing. Durable queued shifts are not deleted.
+The rebuilt app's worker B home shows an empty Recent section and own empty schedule.
+Read-only SQLite inspection confirmed that the four old September 22 rows belonged to
+worker 1 (Legacy worker), while the current test workers are Anna a (2) and Anna b (3).
+Those four rows remain on disk; hiding them for both current accounts is correct.

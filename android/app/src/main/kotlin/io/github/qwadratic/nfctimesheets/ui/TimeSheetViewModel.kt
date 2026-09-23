@@ -591,6 +591,7 @@ class TimeSheetViewModel(private val app: TimeSheetsApplication) : ViewModel() {
         if ((_session.value as? SessionState.SignedIn)?.worker?.id != worker.id) {
             scheduleRequest++
             _schedule.value = ScheduleState.Loading
+            _log.value = LogState(pending = _log.value.pending, pushArmed = _log.value.pushArmed)
         }
         app.workers.write(worker)
         _session.value = SessionState.SignedIn(worker)
@@ -623,10 +624,14 @@ class TimeSheetViewModel(private val app: TimeSheetsApplication) : ViewModel() {
             }
             _funShiftScreen.value = app.flags.isOn(FlagCache.FUN_SHIFT_SCREEN)
             val unresolved = runCatching { app.api.unresolvedShifts() }.getOrDefault(_log.value.unresolved)
+            val shifts = io { app.store.forWorker(worker.id) }
+            val locationNames = io { app.store.locationNames() }
+            val zones = io { app.store.zones() }
+            if ((_session.value as? SessionState.SignedIn)?.worker?.id != worker.id) return@launch
             _log.value = _log.value.copy(
-                shifts = io { app.store.all() },
-                locationNames = io { app.store.locationNames() },
-                zones = io { app.store.zones() },
+                shifts = shifts,
+                locationNames = locationNames,
+                zones = zones,
                 unresolved = unresolved,
                 pending = pending.first,
                 pushArmed = pending.second,
@@ -697,6 +702,16 @@ class TimeSheetViewModel(private val app: TimeSheetsApplication) : ViewModel() {
     /** SQLite off the main thread. Small table, but a lock on the UI thread is an ANR. */
     private suspend fun <T> io(block: () -> T): T = withContext(Dispatchers.IO) { block() }
 
+    /** Keep the durable outbox intact while showing only the signed-in worker's rows. */
+    private suspend fun reloadLocalLog(workerId: Int): Boolean {
+        val rows = io { app.store.forWorker(workerId) }
+        val pending = io { app.store.pendingSummary() }
+        val pushArmed = io { SyncScheduler.isScheduled(app) }
+        if ((_session.value as? SessionState.SignedIn)?.worker?.id != workerId) return false
+        _log.value = _log.value.copy(shifts = rows, pending = pending, pushArmed = pushArmed)
+        return true
+    }
+
     /**
      * ONE TAP = ONE TOGGLE. The row is written locally FIRST — a tap in a basement still
      * counts — and pushed straight after.
@@ -723,12 +738,8 @@ class TimeSheetViewModel(private val app: TimeSheetsApplication) : ViewModel() {
                 SyncScheduler.ensure(app)
                 result
             }
-            _log.value = _log.value.copy(
-                shifts = io { app.store.all() },
-                switchNotice = notice,
-                pending = io { app.store.pendingSummary() },
-                pushArmed = io { SyncScheduler.isScheduled(app) },
-            )
+            if (!reloadLocalLog(worker.id)) return@launch
+            _log.value = _log.value.copy(switchNotice = notice)
             // AFTER the row is written and read back, and never before it. Everything in
             // armSignals is a signal, and a signal may never delay, throw into or fail a
             // clock-in: a denied permission and a dead network are both "arm nothing",
@@ -740,7 +751,7 @@ class TimeSheetViewModel(private val app: TimeSheetsApplication) : ViewModel() {
 
     /** @return the (left, arrived) site names when this tap auto-closed another shift. */
     private fun writeTap(workerId: Int, locationId: String): Pair<String?, String?>? {
-        val running = app.store.openShift()
+        val running = app.store.openShift(workerId)
         var notice: Pair<String?, String?>? = null
 
         if (running == null) {
@@ -832,11 +843,7 @@ class TimeSheetViewModel(private val app: TimeSheetsApplication) : ViewModel() {
                 // already-synced, so this shift is never queued for a push that would be a
                 // duplicate of the call we just made.
                 io { app.store.adopt(shift) }
-                _log.value = _log.value.copy(
-                    shifts = io { app.store.all() },
-                    pending = io { app.store.pendingSummary() },
-                    pushArmed = io { SyncScheduler.isScheduled(app) },
-                )
+                if (!reloadLocalLog(worker.id)) return@launch
                 armSignals()
                 onResult(null)
             } catch (failure: ApiFailure) {
@@ -872,11 +879,7 @@ class TimeSheetViewModel(private val app: TimeSheetsApplication) : ViewModel() {
                     app.store.applyServer(shift)
                     app.store.markCloseSynced(open.clientUuid)
                 }
-                _log.value = _log.value.copy(
-                    shifts = io { app.store.all() },
-                    pending = io { app.store.pendingSummary() },
-                    pushArmed = io { SyncScheduler.isScheduled(app) },
-                )
+                if (!reloadLocalLog(worker.id)) return@launch
                 // The running-shift notification and the 8h ladder go with the shift. A
                 // notification left standing after a Stop is the orphaned-lock bug again.
                 armSignals()
@@ -889,12 +892,13 @@ class TimeSheetViewModel(private val app: TimeSheetsApplication) : ViewModel() {
 
     /** POST /shifts/:id/resolve, then mirror the result locally (decision-10). */
     fun resolve(shift: WireShift, endTime: Instant, onError: (String) -> Unit) {
+        val worker = (_session.value as? SessionState.SignedIn)?.worker ?: return
         viewModelScope.launch {
             try {
                 val updated = app.api.resolveShift(shift.id, endTime)
                 io { app.store.applyServer(updated) }
+                if (!reloadLocalLog(worker.id)) return@launch
                 _log.value = _log.value.copy(
-                    shifts = io { app.store.all() },
                     unresolved = _log.value.unresolved.filterNot { it.id == shift.id },
                 )
                 // Confirming an auto-closed shift is the one path that ends a shift WITHOUT
