@@ -497,4 +497,15 @@
     <string name="notify_pending_title">Not confirmed yet: %1$s</string>
     <string name="notify_pending_body">Your time is saved on this phone. Open the app and check the message.</string>
     <string name="a11y_shift_pending">%1$d hours and %2$d minutes recorded on this phone for %3$s. Not confirmed by the office yet.</string>
+    <string name="schedule_title">My schedule</string>
+    <string name="schedule_explainer">This is the plan only. Clock in and out as usual to record your hours.</string>
+    <string name="schedule_loading">Loading assignments …</string>
+    <string name="schedule_empty">No assignments planned for the next 31 days.</string>
+    <string name="schedule_offline">Could not load assignments without a connection.</string>
+    <string name="schedule_error">Could not load assignments.</string>
+    <string name="schedule_retry">Try again</string>
+    <string name="schedule_refresh">Refresh assignments</string>
+    <string name="schedule_when">%1$s, %2$s – %3$s, %4$s</string>
+    <string name="schedule_more">All upcoming assignments</string>
+    <string name="schedule_less">Show less</string>
 </resources>

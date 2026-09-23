@@ -626,4 +626,15 @@
     <string name="notify_pending_title">Noch nicht bestätigt: %1$s</string>
     <string name="notify_pending_body">Die Zeit ist auf dem Telefon gespeichert. Öffnen Sie die App und prüfen Sie den Hinweis.</string>
     <string name="a11y_shift_pending">%1$d Stunden und %2$d Minuten für %3$s auf diesem Telefon erfasst. Noch nicht von der Verwaltung bestätigt.</string>
+    <string name="schedule_title">Meine Einsätze</string>
+    <string name="schedule_explainer">Dies ist nur die Planung. Zum Erfassen Ihrer Arbeitszeit wie gewohnt ein- und ausstempeln.</string>
+    <string name="schedule_loading">Einsätze werden geladen …</string>
+    <string name="schedule_empty">Für die nächsten 31 Tage sind keine Einsätze geplant.</string>
+    <string name="schedule_offline">Einsätze konnten ohne Verbindung nicht geladen werden.</string>
+    <string name="schedule_error">Einsätze konnten nicht geladen werden.</string>
+    <string name="schedule_retry">Erneut versuchen</string>
+    <string name="schedule_refresh">Einsätze aktualisieren</string>
+    <string name="schedule_when">%1$s, %2$s – %3$s, %4$s</string>
+    <string name="schedule_more">Alle kommenden Einsätze</string>
+    <string name="schedule_less">Weniger anzeigen</string>
 </resources>

@@ -120,6 +120,7 @@ export const COMPANY_NAV_GROUPS: readonly NavGroup[] = [
     hidden: true,
     items: [
       { href: '/workspace/', labelKey: 'dashboard' },
+      { href: '/schedule/', labelKey: 'schedule' },
       { href: '/workers/', labelKey: 'workers' },
       { href: '/locations/', labelKey: 'locations' },
       { href: '/payroll/', labelKey: 'payroll' },

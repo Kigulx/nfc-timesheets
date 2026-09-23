@@ -881,6 +881,11 @@ private fun LogScreen(
     openIntent: (Intent) -> Unit,
 ) {
     val log by model.log.collectAsStateWithLifecycle()
+    val schedule by model.schedule.collectAsStateWithLifecycle()
+    LifecycleResumeEffect(Unit) {
+        model.loadSchedule()
+        onPauseOrDispose { }
+    }
     // decision-57 §3. Default FALSE, and FALSE is today's screen exactly.
     val funTheme by model.funShiftScreen.collectAsStateWithLifecycle()
     var showResolver by remember { mutableStateOf(false) }
@@ -931,6 +936,7 @@ private fun LogScreen(
             openIntent = openIntent,
             onStop = { showManualStop = true },
             funTheme = funTheme,
+            schedule = schedule,
         )
         if (showResolver) {
             ResolveDialog(model, log.unresolved) { showResolver = false }
@@ -1067,6 +1073,8 @@ private fun LogScreen(
         }
         items(log.recent, key = { it.clientUuid }) { ShiftRow(it, model.siteName(it.locationId)) }
 
+        item { ScheduleCard(schedule, model::loadSchedule) }
+
         item {
             // decision-23: there is no push in this system. Promising a notification to
             // somebody who then does not get one is the difference between a late delivery
@@ -1133,6 +1141,7 @@ private fun ShiftRunningScreen(
      * comes from [MaterialTheme] and nothing extra is composed.
      */
     funTheme: Boolean = false,
+    schedule: ScheduleState,
 ) {
     val context = LocalContext.current
 
@@ -1441,6 +1450,8 @@ private fun ShiftRunningScreen(
             }
         }
 
+        ScheduleCard(schedule, model::loadSchedule)
+
         // The escape that is not a gesture. Abmelden lives one tab away in Einstellungen
         // and the material tab is next to it; this says so out loud, because a worker who
         // believes they are stuck is the failure this screen is not allowed to cause.
@@ -1451,6 +1462,55 @@ private fun ShiftRunningScreen(
             textAlign = TextAlign.Center,
         )
     }
+    }
+}
+
+@Composable
+private fun ScheduleCard(state: ScheduleState, retry: () -> Unit) {
+    var expanded by remember(state) { mutableStateOf(false) }
+    Card(Modifier.fillMaxWidth()) {
+        Column(
+            Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            Text(
+                stringResource(R.string.schedule_title),
+                style = MaterialTheme.typography.titleMedium,
+                modifier = Modifier.semantics { heading() },
+            )
+            Text(stringResource(R.string.schedule_explainer), style = MaterialTheme.typography.bodySmall)
+            when (state) {
+                ScheduleState.Loading -> Text(stringResource(R.string.schedule_loading))
+                is ScheduleState.Failed -> {
+                    Text(stringResource(if (state.offline) R.string.schedule_offline else R.string.schedule_error))
+                    TextButton(onClick = retry) { Text(stringResource(R.string.schedule_retry)) }
+                }
+                is ScheduleState.Loaded -> {
+                    if (state.assignments.isEmpty()) {
+                        Text(stringResource(R.string.schedule_empty))
+                    } else {
+                        (if (expanded) state.assignments else state.assignments.take(3)).forEach { assignment ->
+                            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                                Text(assignment.locationName, style = MaterialTheme.typography.titleSmall)
+                                Text(stringResource(
+                                    R.string.schedule_when,
+                                    viennaDate(assignment.startsAt), viennaTime(assignment.startsAt),
+                                    viennaDate(assignment.endsAt), viennaTime(assignment.endsAt),
+                                ))
+                                if (assignment.note.isNotBlank()) Text(assignment.note)
+                            }
+                            HorizontalDivider()
+                        }
+                        if (state.assignments.size > 3) {
+                            TextButton(onClick = { expanded = !expanded }) {
+                                Text(stringResource(if (expanded) R.string.schedule_less else R.string.schedule_more))
+                            }
+                        }
+                    }
+                    TextButton(onClick = retry) { Text(stringResource(R.string.schedule_refresh)) }
+                }
+            }
+        }
     }
 }
 

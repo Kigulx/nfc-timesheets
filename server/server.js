@@ -22,6 +22,7 @@ import { portalRoutes } from "./routes/portal.js";
 import { webhookRoutes } from "./routes/webhooks.js";
 import { workspaceRoutes } from "./routes/workspaces.js";
 import { trialRequestRoutes } from "./routes/trial-requests.js";
+import { scheduleRoutes } from "./routes/schedule.js";
 import { wellknown } from "./routes/wellknown.js";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
@@ -81,6 +82,7 @@ const routes = [
   ...webhookRoutes,
   ...workspaceRoutes,
   ...trialRequestRoutes,
+  ...scheduleRoutes,
 ];
 
 async function health() {

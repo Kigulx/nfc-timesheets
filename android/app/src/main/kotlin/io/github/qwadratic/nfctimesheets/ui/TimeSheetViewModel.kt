@@ -15,6 +15,7 @@ import io.github.qwadratic.nfctimesheets.core.ShiftSignal
 import io.github.qwadratic.nfctimesheets.core.TapInbox
 import io.github.qwadratic.nfctimesheets.core.WireMaterialRequest
 import io.github.qwadratic.nfctimesheets.core.WireShift
+import io.github.qwadratic.nfctimesheets.core.WireScheduleAssignment
 import io.github.qwadratic.nfctimesheets.core.WireZone
 import io.github.qwadratic.nfctimesheets.core.WireWorker
 import io.github.qwadratic.nfctimesheets.core.Zones
@@ -25,6 +26,7 @@ import io.github.qwadratic.nfctimesheets.sync.SyncScheduler
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
@@ -119,6 +121,12 @@ sealed interface MyHoursState {
     data class Failed(val offline: Boolean) : MyHoursState
 }
 
+sealed interface ScheduleState {
+    data object Loading : ScheduleState
+    data class Loaded(val assignments: List<WireScheduleAssignment>) : ScheduleState
+    data class Failed(val offline: Boolean) : ScheduleState
+}
+
 class TimeSheetViewModel(private val app: TimeSheetsApplication) : ViewModel() {
 
     // THE TWO init{} LAUNCHES BELOW USED TO LIVE HERE, ABOVE EVERY PROPERTY THEY TOUCH —
@@ -183,6 +191,10 @@ class TimeSheetViewModel(private val app: TimeSheetsApplication) : ViewModel() {
      *  [LogState]/handleTap/armSignals/writeTap — see [loadMyHours]. */
     private val _myHours = MutableStateFlow<MyHoursState>(MyHoursState.Loading)
     val myHours: StateFlow<MyHoursState> = _myHours.asStateFlow()
+
+    private val _schedule = MutableStateFlow<ScheduleState>(ScheduleState.Loading)
+    val schedule: StateFlow<ScheduleState> = _schedule.asStateFlow()
+    private var scheduleRequest = 0
 
     /** A material pass is in flight. Two overlapping passes could post the same row twice. */
     private var materialPassRunning = false
@@ -551,6 +563,8 @@ class TimeSheetViewModel(private val app: TimeSheetsApplication) : ViewModel() {
             app.cookies.clear()
             app.workers.clear()
             _session.value = SessionState.SignedOut()
+            scheduleRequest++
+            _schedule.value = ScheduleState.Loading
             // NOT LogState(): the pending count survives the sign-out, because the queued
             // rows do. They belong to the worker who logged them and go out when that
             // worker signs back in — and until then the sign-in screen has to say so, or
@@ -572,6 +586,12 @@ class TimeSheetViewModel(private val app: TimeSheetsApplication) : ViewModel() {
     }
 
     private fun adopt(worker: WireWorker) {
+        // A cached session may already have mounted the home screen and started its
+        // schedule request. Confirming that SAME worker must not strand it in Loading.
+        if ((_session.value as? SessionState.SignedIn)?.worker?.id != worker.id) {
+            scheduleRequest++
+            _schedule.value = ScheduleState.Loading
+        }
         app.workers.write(worker)
         _session.value = SessionState.SignedIn(worker)
     }
@@ -988,6 +1008,30 @@ class TimeSheetViewModel(private val app: TimeSheetsApplication) : ViewModel() {
         }
     }
 
+    /** The schedule is a fresh, read-only view; never persisted or used by tap handling. */
+    fun loadSchedule() {
+        if (_session.value !is SessionState.SignedIn) return
+        val request = ++scheduleRequest
+        _schedule.value = ScheduleState.Loading
+        viewModelScope.launch {
+            try {
+                val assignments = app.api.mySchedule()
+                if (request == scheduleRequest && _session.value is SessionState.SignedIn) {
+                    _schedule.value = ScheduleState.Loaded(assignments)
+                }
+            } catch (failure: ApiFailure) {
+                if (request == scheduleRequest && _session.value is SessionState.SignedIn) {
+                    _schedule.value = ScheduleState.Failed(offline = failure.status == 0)
+                }
+            } catch (failure: Exception) {
+                if (failure is CancellationException) throw failure
+                if (request == scheduleRequest && _session.value is SessionState.SignedIn) {
+                    _schedule.value = ScheduleState.Failed(offline = false)
+                }
+            }
+        }
+    }
+
     /** Disk -> screen. The only place [MaterialState] entries are built. */
     private suspend fun readMaterials(featureUnavailable: Boolean = _materials.value.featureUnavailable) {
         val outbox = io { app.materials.outbox() }
@@ -1001,6 +1045,8 @@ class TimeSheetViewModel(private val app: TimeSheetsApplication) : ViewModel() {
 
     /** A 401 came back from somewhere: expired, revoked, or the worker was deactivated. */
     private fun dropToSignedOut() {
+        scheduleRequest++
+        _schedule.value = ScheduleState.Loading
         app.sessionRejected.value = false
         app.cookies.clear()
         // A signed-out phone must not keep telling somebody they are clocked in.

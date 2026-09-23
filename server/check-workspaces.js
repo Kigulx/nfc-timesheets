@@ -4,6 +4,7 @@ import { readFileSync, readdirSync } from "node:fs";
 import { randomUUID } from "node:crypto";
 import pg from "pg";
 import { prepareWorkspaceTestDb } from "./db/workspace-test-db.js";
+import { checkProductFeatures } from "./check-product-features.js";
 
 const baseUrl = process.env.DATABASE_URL;
 if (!baseUrl || !["127.0.0.1", "localhost", "[::1]"].includes(new URL(baseUrl).hostname)) {
@@ -77,6 +78,7 @@ try {
     companies.push({ id: saved.data.company.id, cookie, worker: worker.data.worker, location: location.data.location, zone, workerCookie: `ts_worker=${workerToken}` });
   }
   const [a,b] = companies;
+  await checkProductFeatures({call,owner,a,b,platform,resetLoginRate});
   const phoneB = '+436641234567';
   const operatorB = await call('/admin/operators', { cookie: b.cookie, body: {name:'Operator B',phone:phoneB} });
   assert.equal(operatorB.status,201);
