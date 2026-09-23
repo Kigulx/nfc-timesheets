@@ -1749,8 +1749,8 @@ a {
      (the actual `scrollingElement`) still reported a taller `scrollHeight` and `scrollTo()`
      still moved the header off-screen. Setting `overflow: hidden` on the real scrolling
      root removes the ambiguity outright — there is no root-level scroll range to have. */
-  html,
-  body {
+  html:has(.app-shell),
+  body:has(.app-shell) {
     overflow: hidden;
   }
 

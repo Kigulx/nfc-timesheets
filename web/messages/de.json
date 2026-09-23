@@ -1719,7 +1719,43 @@
     "inboxEmail": "Geschäftliche E-Mail",
     "inboxLanguage": "Sprache",
     "inboxReceived": "Eingegangen",
-    "inboxLimit": "Die letzten 200 Anfragen werden angezeigt."
+    "inboxLimit": "Die letzten 200 Anfragen werden angezeigt.",
+    "dayKicker": "EIN ARBEITSTAG, GUT VERBUNDEN",
+    "dayTitle": "Vom ersten Einsatz bis zum Monatsüberblick.",
+    "dayLead": "Alle sehen, was sie brauchen. Ihr Team weiß, wo es hinmuss. Das Büro weiß, welche Arbeit erfasst wurde.",
+    "day": {
+      "plan": {
+        "when": "VOR DEM EINSATZ",
+        "title": "Mit einem klaren Plan starten.",
+        "body": "Teilen Sie Mitarbeitende für Gebäude und Zeiten ein. Die nächsten Einsätze erscheinen mit Ihren Hinweisen in der Android-App."
+      },
+      "work": {
+        "when": "VOR ORT",
+        "title": "Antippen. Und an die Arbeit.",
+        "body": "Ankunft und Ende am geprüften NFC-Tag erfassen. Fehlende Reinigungsmittel direkt aus der App anfordern."
+      },
+      "review": {
+        "when": "ZURÜCK IM BÜRO",
+        "title": "Aus erfasster Arbeit wird Überblick.",
+        "body": "Stunden je Person und Gebäude prüfen, geschätzte Personalkosten einsehen und Materialanfragen verfolgen. Geplante Einsätze bleiben von geleisteten Stunden getrennt."
+      }
+    },
+    "questionsKicker": "GUT ZU WISSEN",
+    "questionsTitle": "Ein paar praktische Fragen.",
+    "questions": {
+      "phone": {
+        "title": "Was braucht das Team?",
+        "body": "Ein kompatibles NFC-fähiges Smartphone mit der App, ein Mitarbeiterkonto und einen eingerichteten, geprüften NFC-Tag am Arbeitsbereich. Die Geräte Ihres Teams besprechen wir gerne bei der Einrichtung."
+      },
+      "pay": {
+        "title": "Werden Löhne automatisch berechnet?",
+        "body": "Die Übersicht schätzt Personalkosten aus erfassten Stunden und hinterlegten Stundensätzen. Prüfung und Korrekturen bleiben bei Ihnen; Gehaltszahlungen werden nicht ausgeführt."
+      },
+      "setup": {
+        "title": "Wie starten wir?",
+        "body": "Hinterlassen Sie Firmenname und geschäftliche E-Mail-Adresse. Wir melden uns zu Zugang und Einrichtung: Firma, Standorte, Mitarbeitende und Tags. Der erste Monat ist kostenlos; zusätzliche Mitarbeitende über zehn hinaus nach Vereinbarung."
+      }
+    }
   },
   "periodPicker": {
     "last30Days": "Letzte 30 Tage",

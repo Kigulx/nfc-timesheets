@@ -21,116 +21,108 @@ function TapStory() {
         {t('visualCaption')}
       </div>
       <svg className="landing-story-art" viewBox="0 0 640 480" fill="none" aria-hidden="true">
-        <defs>
-          <linearGradient
-            id="landingPhone"
-            x1="330"
-            y1="93"
-            x2="486"
-            y2="388"
-            gradientUnits="userSpaceOnUse"
-          >
-            <stop stopColor="#203A54" />
-            <stop offset="1" stopColor="#0C1F33" />
-          </linearGradient>
-          <linearGradient
-            id="landingScreen"
-            x1="340"
-            y1="116"
-            x2="472"
-            y2="364"
-            gradientUnits="userSpaceOnUse"
-          >
-            <stop stopColor="#F6F5F0" />
-            <stop offset="1" stopColor="#DDE6DF" />
-          </linearGradient>
-          <filter id="landingShadow" x="-50%" y="-50%" width="200%" height="200%">
-            <feGaussianBlur stdDeviation="16" />
-          </filter>
-        </defs>
-        <ellipse
-          cx="330"
-          cy="397"
-          rx="208"
-          ry="24"
-          fill="#0C2534"
-          opacity=".23"
-          filter="url(#landingShadow)"
-        />
-        <path
-          d="M95 337C125 354 166 362 210 360"
-          stroke="#9ADDBD"
-          strokeOpacity=".6"
-          strokeWidth="2"
-          strokeDasharray="4 8"
-        />
+        <ellipse cx="320" cy="401" rx="255" ry="16" fill="#102E2C" opacity=".2" />
         <g className="landing-building">
-          <rect x="90" y="138" width="190" height="239" rx="20" fill="#F3F0E6" />
-          <rect x="105" y="153" width="160" height="207" rx="12" fill="#E3E9E1" />
-          <path d="M105 282H265" stroke="#CBD9CE" strokeWidth="2" />
-          <path d="M142 153V282M226 153V282" stroke="#CBD9CE" strokeWidth="2" />
-          <rect x="126" y="177" width="37" height="59" rx="5" fill="#AACABE" />
-          <rect x="207" y="177" width="37" height="59" rx="5" fill="#AACABE" />
-          <rect x="169" y="300" width="49" height="60" rx="7" fill="#325D58" />
-          <circle cx="209" cy="329" r="3" fill="#D9E7D7" />
-          <rect x="224" y="297" width="27" height="29" rx="6" fill="#214A48" />
+          <rect x="65" y="116" width="190" height="278" rx="12" fill="#E6E9DA" />
+          <path d="M65 165H255M65 242H255" stroke="#CDD7C6" strokeWidth="3" />
+          <rect x="84" y="183" width="50" height="43" rx="4" fill="#9FBEAD" />
+          <rect x="151" y="183" width="50" height="43" rx="4" fill="#9FBEAD" />
+          <rect x="85" y="263" width="91" height="131" rx="6" fill="#26534A" />
+          <path d="M130 272V388" stroke="#83A99A" strokeWidth="2" />
+          <circle cx="141" cy="326" r="3" fill="#E6E9DA" />
+          <rect x="207" y="266" width="28" height="34" rx="7" fill="#153E36" />
           <path
-            d="M232 308c5-5 10-5 14 0m-11 4c3-3 6-3 8 0"
-            stroke="#B8ECCC"
+            d="M213 278q8-8 16 0m-13 5q5-5 10 0"
+            stroke="#D9ED9E"
             strokeWidth="2"
             strokeLinecap="round"
           />
         </g>
         <g className="landing-cleaner">
-          <path d="M286 251c-13 3-22 13-23 28l-5 73h61l-6-73c-1-15-11-25-27-28Z" fill="#D8EC9E" />
           <path
-            d="M272 284 247 302l-8 12m67-29 29 21"
-            stroke="#D8EC9E"
-            strokeWidth="14"
+            d="M290 317 284 381M313 317 323 382"
+            stroke="#153A39"
+            strokeWidth="19"
             strokeLinecap="round"
           />
+          <path d="M286 378h-12q-8 3-8 13h28v-9m23-4h12q11 2 13 13h-28v-9" fill="#0C292B" />
+          <path d="M282 230q20-11 38 0l11 91q-28 12-57 0Z" fill="#D9ED9E" />
+          <path d="m292 230 0 36h23v-36m-38 43h51" stroke="#ADC77C" strokeWidth="3" />
+          <rect x="292" y="287" width="25" height="19" rx="3" fill="#B9D28A" />
+          <path d="m284 243-25 29-29 7" stroke="#D9ED9E" strokeWidth="16" strokeLinecap="round" />
+          <path d="m319 243 25 39 14-4" stroke="#D9ED9E" strokeWidth="16" strokeLinecap="round" />
           <path
-            d="m271 352-5 29m41-29 9 29"
-            stroke="#163A3A"
-            strokeWidth="13"
+            d="m230 279-9 2m137-3 7-2"
+            stroke="#DCAD87"
+            strokeWidth="11"
             strokeLinecap="round"
           />
-          <circle cx="288" cy="224" r="26" fill="#E0B78E" />
+          <path d="M298 215v16" stroke="#DCAD87" strokeWidth="13" />
+          <circle cx="300" cy="199" r="24" fill="#E8BC96" />
+          <circle cx="321" cy="179" r="12" fill="#173B37" />
+          <path d="M276 199q-6-35 24-33 26 0 25 32-17-3-27-15-5 11-22 16" fill="#173B37" />
+          <circle cx="290" cy="201" r="2" fill="#173B37" />
+          <circle cx="307" cy="201" r="2" fill="#173B37" />
+          <path d="M291 212q7 6 14 0" stroke="#9B5C43" strokeWidth="2" strokeLinecap="round" />
+          <path d="m363 248-13 140" stroke="#B6C9B6" strokeWidth="6" strokeLinecap="round" />
+          <path d="m325 389 53 4-1 9-58-4Z" fill="#D1DEC5" />
           <path
-            d="M262 223c-1-22 11-34 27-34 18 0 29 13 25 34-12-1-20-6-25-14-7 9-16 13-27 14Z"
-            fill="#163C3B"
+            d="m329 397-1 5m10-4-1 5m10-4-1 5m10-4-1 5m10-4-1 5"
+            stroke="#93B09A"
+            strokeWidth="3"
           />
-          <circle cx="279" cy="226" r="2" fill="#29413B" />
-          <circle cx="298" cy="226" r="2" fill="#29413B" />
-          <path d="M280 236c5 5 12 5 17 0" stroke="#9B5C43" strokeWidth="2" strokeLinecap="round" />
         </g>
-        <g className="landing-phone">
-          <rect x="308" y="66" width="212" height="346" rx="35" fill="#081C2C" />
-          <rect x="316" y="74" width="196" height="330" rx="29" fill="url(#landingPhone)" />
-          <rect x="329" y="91" width="170" height="296" rx="20" fill="url(#landingScreen)" />
-          <rect x="377" y="99" width="74" height="16" rx="8" fill="#0C2032" />
-          <circle cx="414" cy="164" r="29" fill="#DAE8DA" />
+        <g className="landing-handset">
+          <rect
+            x="215"
+            y="259"
+            width="18"
+            height="31"
+            rx="4"
+            fill="#10243D"
+            transform="rotate(-12 224 275)"
+          />
+          <rect
+            x="219"
+            y="264"
+            width="10"
+            height="17"
+            rx="2"
+            fill="#E3EFDD"
+            transform="rotate(-12 224 275)"
+          />
+        </g>
+        <g className="landing-tap-pulse">
+          <circle cx="221" cy="283" r="25" stroke="#D9ED9E" strokeWidth="2" />
+          <circle cx="221" cy="283" r="36" stroke="#D9ED9E" strokeOpacity=".5" />
+        </g>
+        <path
+          className="landing-data-path"
+          d="M239 277C381 113 355 151 411 151"
+          stroke="#C7E5BA"
+          strokeWidth="2"
+          strokeDasharray="4 8"
+        />
+        <g className="landing-result">
+          <rect x="409" y="111" width="169" height="235" rx="17" fill="#F6F5EF" />
+          <rect x="425" y="130" width="64" height="6" rx="3" fill="#9FB6A5" />
+          <circle cx="494" cy="184" r="28" fill="#DCEBCC" />
           <path
-            d="m403 164 8 8 15-17"
-            stroke="#277958"
+            className="landing-result-check"
+            d="m482 184 9 9 17-20"
+            stroke="#326449"
             strokeWidth="5"
             strokeLinecap="round"
             strokeLinejoin="round"
           />
-          <rect x="351" y="212" width="126" height="9" rx="4.5" fill="#9FB9B1" />
-          <rect x="370" y="231" width="88" height="6" rx="3" fill="#C1D2C7" />
-          <rect x="348" y="271" width="132" height="72" rx="12" fill="#F7F8F2" />
-          <rect x="361" y="285" width="62" height="5" rx="2.5" fill="#ADC1B3" />
-          <rect x="361" y="301" width="88" height="8" rx="4" fill="#324F4B" />
-          <rect x="361" y="318" width="75" height="5" rx="2.5" fill="#AEC3B7" />
-          <circle cx="414" cy="393" r="3" fill="#708486" />
-        </g>
-        <g className="landing-tap-pulse">
-          <circle cx="238" cy="311" r="33" stroke="#B1EEC8" strokeWidth="3" />
-          <circle cx="238" cy="311" r="47" stroke="#B1EEC8" strokeOpacity=".45" strokeWidth="2" />
-        </g>
-        <g className="landing-spark">
-          <path d="m276 230 7 12 13 4-13 4-7 12-5-12-13-4 13-4 5-12Z" fill="#D4F0C8" />
+          <rect x="441" y="230" width="105" height="8" rx="4" fill="#46655A" />
+          <rect x="457" y="247" width="73" height="5" rx="2.5" fill="#B2C2AE" />
+          <path
+            d="M434 314V291m24 23v-35m24 35v-20m24 20v-42m24 42v-55m24 55v-36"
+            stroke="#8AA98B"
+            strokeWidth="12"
+            strokeLinecap="round"
+          />
         </g>
       </svg>
       <div className="landing-story-status" aria-hidden="true">
@@ -338,6 +330,46 @@ export default function ProductPage() {
               <span className="landing-green-dot" />
               {t('dashboardFoot')}
             </div>
+          </div>
+        </section>
+
+        <section className="landing-day landing-section" aria-labelledby="landing-day-title">
+          <div className="landing-day-heading">
+            <p className="landing-kicker">{t('dayKicker')}</p>
+            <h2 id="landing-day-title">{t('dayTitle')}</h2>
+            <p>{t('dayLead')}</p>
+          </div>
+          <ol className="landing-timeline">
+            {(['plan', 'work', 'review'] as const).map((step, index) => (
+              <li key={step}>
+                <span className="landing-timeline-number" aria-hidden="true">
+                  0{index + 1}
+                </span>
+                <div>
+                  <p className="landing-kicker">{t(`day.${step}.when`)}</p>
+                  <h3>{t(`day.${step}.title`)}</h3>
+                  <p>{t(`day.${step}.body`)}</p>
+                </div>
+              </li>
+            ))}
+          </ol>
+        </section>
+
+        <section
+          className="landing-questions landing-section"
+          aria-labelledby="landing-questions-title"
+        >
+          <div>
+            <p className="landing-kicker">{t('questionsKicker')}</p>
+            <h2 id="landing-questions-title">{t('questionsTitle')}</h2>
+          </div>
+          <div>
+            {(['phone', 'pay', 'setup'] as const).map((question) => (
+              <details key={question}>
+                <summary>{t(`questions.${question}.title`)}</summary>
+                <p>{t(`questions.${question}.body`)}</p>
+              </details>
+            ))}
           </div>
         </section>
 

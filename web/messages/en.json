@@ -1719,7 +1719,43 @@
     "inboxEmail": "Work email",
     "inboxLanguage": "Language",
     "inboxReceived": "Received",
-    "inboxLimit": "Showing the latest 200 requests."
+    "inboxLimit": "Showing the latest 200 requests.",
+    "dayKicker": "A WORKING DAY, CONNECTED",
+    "dayTitle": "From the first assignment to the monthly overview.",
+    "dayLead": "Everyone sees what they need. Your team knows where to go. The office knows what has been recorded.",
+    "day": {
+      "plan": {
+        "when": "BEFORE THE SHIFT",
+        "title": "Give the day a clear plan.",
+        "body": "Assign people to buildings and times. Upcoming assignments appear in the Android app, together with your instructions."
+      },
+      "work": {
+        "when": "ON SITE",
+        "title": "A tap. Then get on with work.",
+        "body": "Record arrival and departure at a verified NFC tag. Request supplies from the app when something is running low."
+      },
+      "review": {
+        "when": "BACK IN THE OFFICE",
+        "title": "Turn recorded work into an overview.",
+        "body": "Review hours by person and building, check estimated labor costs and follow material requests. Planned assignments stay separate from worked hours."
+      }
+    },
+    "questionsKicker": "GOOD TO KNOW",
+    "questionsTitle": "A few practical details.",
+    "questions": {
+      "phone": {
+        "title": "What does the team need?",
+        "body": "A compatible NFC-enabled phone with the app, a worker account and a configured, verified NFC tag at the work area. We can discuss your team’s devices during setup."
+      },
+      "pay": {
+        "title": "Does it calculate wages automatically?",
+        "body": "The overview estimates labor costs from recorded hours and configured hourly rates. Review and corrections remain in your hands; it does not execute payroll payments."
+      },
+      "setup": {
+        "title": "How do we get started?",
+        "body": "Leave your company name and work email. We will contact you about access and setup: company, locations, employees and tags. The first month is free; additional employees beyond ten are priced by agreement."
+      }
+    }
   },
   "periodPicker": {
     "last30Days": "Last 30 days",
