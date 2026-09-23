@@ -33,9 +33,15 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Badge
+import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.NavigationBarItemDefaults
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.rememberDatePickerState
@@ -824,13 +830,22 @@ private fun SignedInScaffold(
     Scaffold(
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
         bottomBar = {
-            NavigationBar {
+            NavigationBar(
+                containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+                tonalElevation = 0.dp,
+                modifier = Modifier.clip(RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)),
+            ) {
                 tabs.forEach { tab ->
                     NavigationBarItem(
+                        colors = NavigationBarItemDefaults.colors(
+                            indicatorColor = MaterialTheme.colorScheme.inverseSurface,
+                            selectedIconColor = MaterialTheme.colorScheme.inverseOnSurface,
+                            selectedTextColor = MaterialTheme.colorScheme.onSurface,
+                        ),
                         selected = current == tab,
                         onClick = { selectedName = tab.name },
                         icon = {
-                            WorkerNavIcon(tab)
+                            BadgedBox(badge = {
                             // The count of things sitting in the warehouse that nobody has
                             // told this worker about. A NUMBER and not a dot, and spoken
                             // rather than only coloured.
@@ -845,6 +860,7 @@ private fun SignedInScaffold(
                                     modifier = Modifier.semantics { contentDescription = spoken },
                                 ) { Text("$arrivals") }
                             }
+                            }) { WorkerNavIcon(tab) }
                         },
                         label = { Text(stringResource(tabLabel(tab))) },
                     )
@@ -954,52 +970,22 @@ private fun LogScreen(
         modifier = Modifier
             .fillMaxSize()
             .windowInsetsPadding(WindowInsets.safeDrawing),
-        contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
+        contentPadding = androidx.compose.foundation.layout.PaddingValues(20.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         item {
             Text(
-                stringResource(R.string.log_title),
+                stringResource(R.string.worker_day_title),
                 style = MaterialTheme.typography.headlineSmall,
                 modifier = Modifier.semantics { heading() },
             )
         }
 
-        if (readiness != NfcReadiness.READY) {
-            item { NfcBanner(readiness, openIntent) }
-        }
 
         // ABOVE the buttons and above the recent list: this is unpaid work that the server
         // has never heard of, and it outranks everything else on the screen.
         if (!log.pending.isEmpty) {
             item { PendingCard(log.pending, armed = log.pushArmed) }
-        }
-
-        // MANUAL FALLBACK, deliberately secondary. The product is the passive tap: hold the
-        // phone to the wall with the app closed. But that depends on the OS dispatching the
-        // tag, and on some phones it never does - silently, with nothing to debug. This
-        // button removes the OS from the path by reading the tag in the foreground, and it
-        // reports what it saw when a tag does not work. Hidden when there is no NFC chip at
-        // all, because then there is nothing to offer.
-        if (readiness != NfcReadiness.UNSUPPORTED) {
-            item {
-                OutlinedButton(
-                    onClick = { openIntent(Intent(logContext, ScanActivity::class.java)) },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .heightIn(min = 48.dp),
-                ) { Text(stringResource(R.string.scan_open)) }
-            }
-            // WRITE A TAG / THE TEST SCAN used to be a THIRD copy of [OperatorSection],
-            // inline on this list and inside this `readiness != UNSUPPORTED` branch. It
-            // moved to Einstellungen (the 2026-08-29 audit's B3), for two reasons. The
-            // reachability one: gated on the NFC chip, it was absent exactly on the phone
-            // whose NFC is off — so a signed-in worker could not reach the operator door at
-            // all without signing out first. The ranking one: this is the tap screen, and
-            // an operator's tool sitting between the scan button and the recent list
-            // outranked the instruction that is the actual product. Nothing about the gate
-            // changed — same composable, same routes, same second cookie jar, and nothing
-            // behind it can open or close a shift (android/checks/verify-no-shift-check.sh).
         }
 
         if (log.unresolved.isNotEmpty()) {
@@ -1025,47 +1011,16 @@ private fun LogScreen(
         }
 
         item {
-            // Clocking in happens by holding the phone to the tag: Android reads it and
-            // opens the App Link. This used to say there was no in-app path to a shift and
-            // that there must not be one — SUPERSEDED BY decision-56 for exactly two
-            // actions, „Ohne Tag starten" above and Stop on the running screen.
-            //
-            // THE ORIGINAL REASONING IS WHY THE FLAGS EXIST, not something the decision
-            // threw away: a second, SILENT path to the same row is how two mechanisms start
-            // disagreeing about somebody's hours. So neither manual action is silent —
-            // each is confirmed by the worker, validated by the server exactly as a tap is
-            // (a manual start only succeeds where a tap would), and stamped manual_start /
-            // manual_close on the row for ever, where the office can see it. Flagged, not
-            // hidden. Everything else still has to be a tap.
-            Text(
-                stringResource(R.string.log_hint_start),
-                style = MaterialTheme.typography.bodyLarge,
-                textAlign = TextAlign.Center,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 24.dp),
+            WorkerStartCard(
+                readiness = readiness,
+                onScan = { openIntent(Intent(logContext, ScanActivity::class.java)) },
+                onManual = { showManualStart = true },
             )
         }
-
-        // START WITHOUT A TAG (decision-56), and it sits HERE — directly under the tap
-        // instruction — rather than above the recent list where it used to be.
-        //
-        // The old position ranked it above the instruction it is the fallback FOR, and a
-        // TextButton renders in the accent colour, so the loudest thing on the idle screen
-        // was the escape hatch. The 2026-08-29 audit's proposed order is
-        // state -> subject -> time -> metric -> primary instruction -> secondary action ->
-        // banners, and iOS already places its equivalent as "clearly secondary". The
-        // control itself is unchanged: same dialog, same confirmation, same manual_start
-        // stamp, and still shown on EVERY phone including one with no NFC chip — that phone
-        // is exactly the one that cannot scan and could once not clock in at all.
-        item {
-            TextButton(
-                onClick = { showManualStart = true },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .heightIn(min = 48.dp),
-            ) { Text(stringResource(R.string.manual_start_open)) }
+        if (readiness != NfcReadiness.READY && readiness != NfcReadiness.UNSUPPORTED) {
+            item { NfcBanner(readiness, openIntent) }
         }
+        item { ScheduleCard(schedule, model::loadSchedule) }
 
         item { SectionHeading(R.string.log_recent_section) }
         if (log.recent.isEmpty()) {
@@ -1073,7 +1028,7 @@ private fun LogScreen(
         }
         items(log.recent, key = { it.clientUuid }) { ShiftRow(it, model.siteName(it.locationId)) }
 
-        item { ScheduleCard(schedule, model::loadSchedule) }
+
 
         item {
             // decision-23: there is no push in this system. Promising a notification to
@@ -1351,7 +1306,7 @@ private fun ShiftRunningScreen(
 
         // The single obvious way to end the shift, and still the first thing offered.
         Text(
-            stringResource(R.string.log_hint_stop),
+            stringResource(if (readiness == NfcReadiness.UNSUPPORTED) R.string.worker_stop_manual_hint else R.string.log_hint_stop),
             style = MaterialTheme.typography.titleMedium,
             color = onContainer,
             textAlign = TextAlign.Center,
@@ -1483,7 +1438,7 @@ private fun ScheduleCard(state: ScheduleState, retry: () -> Unit) {
                 ScheduleState.Loading -> Text(stringResource(R.string.schedule_loading))
                 is ScheduleState.Failed -> {
                     Text(stringResource(if (state.offline) R.string.schedule_offline else R.string.schedule_error))
-                    TextButton(onClick = retry) { Text(stringResource(R.string.schedule_retry)) }
+                    TextButton(onClick = retry) { Text(stringResource(R.string.schedule_retry), color = MaterialTheme.colorScheme.onSurface) }
                 }
                 is ScheduleState.Loaded -> {
                     if (state.assignments.isEmpty()) {
@@ -1492,22 +1447,27 @@ private fun ScheduleCard(state: ScheduleState, retry: () -> Unit) {
                         (if (expanded) state.assignments else state.assignments.take(3)).forEach { assignment ->
                             Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                                 Text(assignment.locationName, style = MaterialTheme.typography.titleSmall)
-                                Text(stringResource(
-                                    R.string.schedule_when,
-                                    viennaDate(assignment.startsAt), viennaTime(assignment.startsAt),
-                                    viennaDate(assignment.endsAt), viennaTime(assignment.endsAt),
-                                ))
-                                if (assignment.note.isNotBlank()) Text(assignment.note)
+                                Text(
+                                    if (viennaDate(assignment.startsAt) == viennaDate(assignment.endsAt)) {
+                                        stringResource(R.string.schedule_same_day, viennaDate(assignment.startsAt),
+                                            viennaTime(assignment.startsAt), viennaTime(assignment.endsAt))
+                                    } else {
+                                        stringResource(R.string.schedule_when, viennaDate(assignment.startsAt), viennaTime(assignment.startsAt),
+                                            viennaDate(assignment.endsAt), viennaTime(assignment.endsAt))
+                                    }, style = MaterialTheme.typography.bodyMedium,
+                                )
+                                if (assignment.note.isNotBlank()) Text(assignment.note,
+                                    style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
                             HorizontalDivider()
                         }
                         if (state.assignments.size > 3) {
                             TextButton(onClick = { expanded = !expanded }) {
-                                Text(stringResource(if (expanded) R.string.schedule_less else R.string.schedule_more))
+                                Text(stringResource(if (expanded) R.string.schedule_less else R.string.schedule_more), color = MaterialTheme.colorScheme.onSurface)
                             }
                         }
                     }
-                    TextButton(onClick = retry) { Text(stringResource(R.string.schedule_refresh)) }
+                    TextButton(onClick = retry) { Text(stringResource(R.string.schedule_refresh), color = MaterialTheme.colorScheme.onSurface) }
                 }
             }
         }
@@ -1717,6 +1677,47 @@ private fun appNotificationSettings(packageName: String): Intent =
         .putExtra(Settings.EXTRA_APP_PACKAGE, packageName)
         .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
 
+/** The idle screen has one primary action; manual starts still require confirmation. */
+@Composable
+private fun WorkerStartCard(readiness: NfcReadiness, onScan: () -> Unit, onManual: () -> Unit) {
+    val manualOnly = readiness == NfcReadiness.UNSUPPORTED
+    val ink = MaterialTheme.colorScheme.onSurface
+    val muted = MaterialTheme.colorScheme.outlineVariant
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+        border = BorderStroke(1.dp, muted),
+    ) {
+        Column(Modifier.padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(14.dp)) {
+            Canvas(Modifier.size(64.dp)) {
+                drawCircle(muted, style = Stroke(1.dp.toPx()))
+                drawRoundRect(ink, topLeft = Offset(size.width * .34f, size.height * .2f),
+                    size = androidx.compose.ui.geometry.Size(size.width * .32f, size.height * .6f),
+                    cornerRadius = androidx.compose.ui.geometry.CornerRadius(5.dp.toPx()), style = Stroke(2.dp.toPx()))
+                drawLine(ink, Offset(size.width * .45f, size.height * .72f), Offset(size.width * .55f, size.height * .72f), 2.dp.toPx())
+            }
+            Text(stringResource(if (manualOnly) R.string.worker_start_manual_title else R.string.worker_start_title),
+                style = MaterialTheme.typography.titleLarge, textAlign = TextAlign.Center)
+            Text(stringResource(if (manualOnly) R.string.worker_start_manual_hint else R.string.log_hint_start),
+                style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center)
+            Button(
+                onClick = if (manualOnly) onManual else onScan,
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.inverseSurface,
+                    contentColor = MaterialTheme.colorScheme.inverseOnSurface),
+                modifier = Modifier.fillMaxWidth().heightIn(min = 54.dp),
+                shape = RoundedCornerShape(14.dp),
+            ) { Text(stringResource(if (manualOnly) R.string.manual_start_open else R.string.scan_open)) }
+            if (!manualOnly) {
+                TextButton(onClick = onManual, modifier = Modifier.heightIn(min = 48.dp)) {
+                    Text(stringResource(R.string.manual_start_open), color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+        }
+    }
+}
+
 @Composable
 private fun NfcBanner(readiness: NfcReadiness, openIntent: (Intent) -> Unit) {
     val (title, body, action) = when (readiness) {
@@ -1727,14 +1728,14 @@ private fun NfcBanner(readiness: NfcReadiness, openIntent: (Intent) -> Unit) {
         NfcReadiness.READY -> return
     }
     Card(Modifier.fillMaxWidth()) {
-        Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             Text(
                 stringResource(title),
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.error,
                 modifier = Modifier.semantics { heading() },
             )
-            Text(stringResource(body))
+            Text(stringResource(body), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             if (action != null) {
                 Button(
                     onClick = {
@@ -1857,7 +1858,7 @@ private fun PendingCard(pending: PendingWork.Summary, signedOut: Boolean = false
  */
 @Composable
 private fun ShiftRow(shift: LocalShift, siteName: String?) {
-    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+    Column(Modifier.fillMaxWidth().padding(vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Row(
             Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -2136,93 +2137,75 @@ private fun MaterialScreen(model: TimeSheetViewModel) {
             }
         }
 
-        // Ask.
-        item { SectionHeading(R.string.material_ask_section) }
         item {
-            OutlinedTextField(
-                value = typed,
-                // Hard stop at the server's own limit rather than a 400 the worker cannot
-                // read. Truncating only when it is exceeded means the cursor is never
-                // moved under somebody who is still typing.
-                onValueChange = {
-                    typed = it.take(MaterialQueue.BODY_MAX)
-                    justSaved = false
-                },
-                label = { Text(stringResource(R.string.material_input_label)) },
-                supportingText = { Text(stringResource(R.string.material_input_hint)) },
-                // Multi-line and NOT singleLine: "zwei Mopps, Glasreiniger, 3 Sack
-                // Müllsäcke" is a list, and a one-line box says the wrong thing about
-                // how much detail is welcome. Autocorrect stays ON here, unlike the code
-                // field — this is prose in the worker's own language.
-                minLines = 3,
-                maxLines = 8,
-                keyboardOptions = KeyboardOptions(
-                    capitalization = KeyboardCapitalization.Sentences,
-                    keyboardType = KeyboardType.Text,
-                    imeAction = ImeAction.Default,
-                ),
-                modifier = Modifier.fillMaxWidth(),
-            )
-        }
-        if (typed.length > MaterialQueue.BODY_MAX - 200) {
-            item {
-                Text(
-                    stringResource(R.string.material_char_count, typed.length, MaterialQueue.BODY_MAX),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-        }
-        if (contextLocationId != null) {
-            item {
-                // CONTEXT, never a cost split (decision-6). The building is recorded
-                // because it is the one thing the worker actually knows; the P&L divides
-                // materials pro-rata by labour hours and never by this field.
-                val name = model.siteName(contextLocationId)
-                Text(
-                    if (name != null) {
-                        stringResource(R.string.material_for_site, name)
-                    } else {
-                        stringResource(R.string.material_for_current_site)
-                    },
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-        }
-        item {
-            Button(
-                onClick = {
-                    if (model.submitMaterial(typed)) {
-                        typed = ""
-                        justSaved = true
+            Card(Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)) {
+                Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                    SectionHeading(R.string.material_ask_section)
+                    OutlinedTextField(
+                        value = typed,
+                        onValueChange = {
+                            typed = it.take(MaterialQueue.BODY_MAX)
+                            justSaved = false
+                        },
+                        label = { Text(stringResource(R.string.material_input_label)) },
+                        supportingText = { Text(stringResource(R.string.material_input_hint)) },
+                        minLines = 3,
+                        maxLines = 8,
+                        keyboardOptions = KeyboardOptions(
+                            capitalization = KeyboardCapitalization.Sentences,
+                            keyboardType = KeyboardType.Text,
+                            imeAction = ImeAction.Default,
+                        ),
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    if (typed.length > MaterialQueue.BODY_MAX - 200) {
+                        Text(
+                            stringResource(R.string.material_char_count, typed.length, MaterialQueue.BODY_MAX),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
                     }
-                },
-                enabled = MaterialQueue.normalise(typed) != null,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .heightIn(min = 48.dp),
-            ) { Text(stringResource(R.string.material_submit)) }
-        }
-        if (justSaved) {
-            item {
-                Text(
-                    stringResource(R.string.material_saved),
-                    style = MaterialTheme.typography.bodyMedium,
-                    modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
-                )
+                    if (contextLocationId != null) {
+                        // Context only; material costs are still split by labor hours (decision-6).
+                        val name = model.siteName(contextLocationId)
+                        Text(
+                            if (name != null) stringResource(R.string.material_for_site, name)
+                            else stringResource(R.string.material_for_current_site),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    Button(
+                        onClick = {
+                            if (model.submitMaterial(typed)) {
+                                typed = ""
+                                justSaved = true
+                            }
+                        },
+                        enabled = MaterialQueue.normalise(typed) != null,
+                        modifier = Modifier.fillMaxWidth().heightIn(min = 54.dp),
+                        shape = RoundedCornerShape(14.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.inverseSurface,
+                            contentColor = MaterialTheme.colorScheme.inverseOnSurface,
+                        ),
+                    ) { Text(stringResource(R.string.material_submit)) }
+                    if (justSaved) {
+                        Text(
+                            stringResource(R.string.material_saved),
+                            style = MaterialTheme.typography.bodyMedium,
+                            modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
+                        )
+                    }
+                    // No push (decision-23): the worker must reopen this tab for delivery updates.
+                    Text(
+                        stringResource(R.string.material_no_push_note),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
             }
-        }
-        item {
-            // decision-23: the server's dependencies are pg + @sentry/node. There is no
-            // APNs certificate and no FCM project, so THERE IS NO PUSH. Promising a
-            // notification to somebody who then does not get one is the difference
-            // between a late delivery and a broken product.
-            Text(
-                stringResource(R.string.material_no_push_note),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
         }
 
         // Everything, newest first.
@@ -2421,7 +2404,7 @@ private fun SettingsScreen(model: TimeSheetViewModel, openIntent: (Intent) -> Un
             .fillMaxSize()
             .windowInsetsPadding(WindowInsets.safeDrawing)
             .verticalScroll(rememberScrollState())
-            .padding(16.dp),
+            .padding(20.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         Text(
@@ -2429,9 +2412,11 @@ private fun SettingsScreen(model: TimeSheetViewModel, openIntent: (Intent) -> Un
             style = MaterialTheme.typography.headlineSmall,
             modifier = Modifier.semantics { heading() },
         )
-        Text(worker?.name.orEmpty(), style = MaterialTheme.typography.titleLarge)
+
         Card(Modifier.fillMaxWidth()) {
-            Column(Modifier.padding(horizontal = 16.dp)) {
+            Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(worker?.name.orEmpty(), style = MaterialTheme.typography.titleLarge)
+                HorizontalDivider()
                 RowLink(stringResource(R.string.myhours_open)) { showMyHours = true }
                 if (log.open == null) {
                     HorizontalDivider()
@@ -2439,14 +2424,18 @@ private fun SettingsScreen(model: TimeSheetViewModel, openIntent: (Intent) -> Un
                 }
             }
         }
-        LanguagePicker()
-
-        HorizontalDivider()
-        RevealSection(label = { Text(stringResource(R.string.settings_push_title)) }) { PushSection(model) }
+        Card(Modifier.fillMaxWidth()) {
+            Column(Modifier.padding(18.dp)) { LanguagePicker() }
+        }
+        Card(Modifier.fillMaxWidth()) {
+            Column(Modifier.padding(18.dp)) {
+                RevealSection(label = { Text(stringResource(R.string.settings_push_title)) }) { PushSection(model) }
+            }
+        }
 
         HorizontalDivider()
         var confirmSignOut by remember { mutableStateOf(false) }
-        TextButton(onClick = { confirmSignOut = true }) { Text(stringResource(R.string.sign_out)) }
+        TextButton(onClick = { confirmSignOut = true }) { Text(stringResource(R.string.sign_out), color = MaterialTheme.colorScheme.onSurface) }
         if (confirmSignOut) {
             androidx.compose.material3.AlertDialog(
                 onDismissRequest = { confirmSignOut = false },
