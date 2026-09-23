@@ -74,8 +74,15 @@ export default function LoginPage() {
     setPending(true)
     setError(null)
     try {
-      await login(email, password)
-      router.push(returnTo ?? '/')
+      const { admin } = await login(email, password)
+      router.push(
+        (returnTo === '/' || admin.role === 'flags' ? null : returnTo) ??
+          (admin.role === 'superadmin'
+            ? '/platform/'
+            : admin.role === 'flags'
+              ? '/flags/'
+              : '/workspace/'),
+      )
     } catch (cause) {
       // One message for every rejected credential — no "unknown user" vs "wrong password"
       // oracle. Only transport/server faults, which say nothing about the account, differ.

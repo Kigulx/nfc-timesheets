@@ -1114,7 +1114,7 @@ export default function ShiftsPage() {
                           </Link>
                         </th>
                         <td>
-                          <Link href={filterHref('/', { location: shift.location_id })}>
+                          <Link href={filterHref('/map/', { location: shift.location_id })}>
                             {shift.location_name}
                             <span className="visually-hidden"> {t('openLocation')}</span>
                           </Link>

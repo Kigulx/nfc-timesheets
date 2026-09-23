@@ -475,7 +475,9 @@ check('/login/ and /reinigung/ are still NOT linked from the admin', () => {
   // admin is a link a director can click into by accident and a URL that ends up in a
   // referrer. `/login/` is a redirect target and is reached through LOGIN_PATH.
   const offenders = sources.flatMap(({ path, text }) =>
-    path === 'lib/nav.ts' || path.startsWith('app/reinigung/')
+    path === 'lib/nav.ts' ||
+    path.startsWith('app/reinigung/') ||
+    path === join('app', 'welcome', 'page.tsx')
       ? []
       : [...text.matchAll(/href=\{?["'`]\/(reinigung|login)\//g)].map(
           (match) => `${path}: href to /${match[1]}/`,

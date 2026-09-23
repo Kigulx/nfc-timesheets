@@ -617,7 +617,7 @@ export default function AnalyticsPage() {
                 the rest of its links live. */}
             <ul className="panel-links">
               <li>
-                <Link href={filterHref('/', { location: selected.location_id })}>
+                <Link href={filterHref('/map/', { location: selected.location_id })}>
                   {t('panelObjectLink')}
                 </Link>
               </li>
