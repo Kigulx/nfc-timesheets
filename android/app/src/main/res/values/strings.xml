@@ -108,8 +108,9 @@
          beendete Schicht wird für das Büro sichtbar markiert. -->
     <string name="manual_start_open">Ohne Tag starten</string>
     <string name="manual_start_title">Ohne Tag starten</string>
-    <string name="manual_start_intro">Nur verwenden, wenn der Tag fehlt oder nicht gelesen werden kann. Wählen Sie das Objekt, in dem Sie jetzt arbeiten. Die Schicht wird für das Büro als manueller Start markiert.</string>
-    <string name="manual_start_no_buildings">Es sind noch keine Objekte auf diesem Telefon gespeichert. Bitte zuerst aktualisieren.</string>
+    <string name="manual_start_intro">Nur verwenden, wenn der Tag fehlt oder nicht gelesen werden kann. Wählen Sie die Zone im Objekt, in der Sie jetzt arbeiten. Die Schicht wird für das Büro als manueller Start markiert.</string>
+    <string name="manual_start_no_zones">Es sind keine Zonen verfügbar. Bitte zuerst aktualisieren. Fehlt Ihre Zone weiterhin, melden Sie sich bei der Verwaltung.</string>
+    <string name="manual_place_label">%1$s · %2$s</string>
     <string name="manual_start_confirm">Schicht starten</string>
     <string name="manual_stop_open">Ohne Tag beenden</string>
     <string name="manual_stop_title">Schicht beenden?</string>

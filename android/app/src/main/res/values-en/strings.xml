@@ -73,8 +73,9 @@
     <!-- decision-56: the manual path, for when no tag can be read. -->
     <string name="manual_start_open">Start without a tag</string>
     <string name="manual_start_title">Start without a tag</string>
-    <string name="manual_start_intro">Only use this when the tag is missing or cannot be read. Pick the building you are working in now. The shift is flagged for the office as a manual start.</string>
-    <string name="manual_start_no_buildings">No buildings are stored on this phone yet. Please refresh first.</string>
+    <string name="manual_start_intro">Only use this when the tag is missing or cannot be read. Pick the zone in the building you are working in now. The shift is flagged for the office as a manual start.</string>
+    <string name="manual_start_no_zones">No zones are available. Please refresh first. If your zone is still missing, contact the office.</string>
+    <string name="manual_place_label">%1$s · %2$s</string>
     <string name="manual_start_confirm">Start the shift</string>
     <string name="manual_stop_open">Finish without a tag</string>
     <string name="manual_stop_title">Finish the shift?</string>

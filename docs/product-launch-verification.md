@@ -86,3 +86,23 @@ The rebuilt app's worker B home shows an empty Recent section and own empty sche
 Read-only SQLite inspection confirmed that the four old September 22 rows belonged to
 worker 1 (Legacy worker), while the current test workers are Anna a (2) and Anna b (3).
 Those four rows remain on disk; hiding them for both current accounts is correct.
+The final A → B → A UI pass confirmed ownership preservation: B saw neither of A's
+new Recent rows nor assignments; returning A saw both its real manual shift and its
+labelled DEBUG-test row again. The emulator is left signed in as Anna a in German.
+
+## Manual start zone selection (TASK-347)
+
+The ownership walkthrough exposed an older real bug: manual start submitted a building
+UUID, which decision-69 no longer accepts. The Android picker now explicitly labels
+each building and zone and submits the selected zone ID; no arbitrary default zone and
+no server-side verification bypass. Explanatory and empty-state copy ships in DE/EN.
+
+After a fresh debug build, the emulator selected `Haus a · Eingang`, used the ordinary
+Start button and received HTTP 201. PostgreSQL confirmed worker 2, the selected
+`start_zone_id`, and `manual_start=true`. The ordinary Stop button set `end_time` and
+`manual_close=true`; the resulting row appeared in Recent. An earlier DEBUG-simulated
+row was used only to inspect local ownership; it is not evidence of server acceptance.
+
+Final read-only review after all fixes covered every decision record and the final
+Android/web deltas. No remaining decision or code-quality blocker was found. The
+reviewer repeated branding (all `ok`, no TODO/FAIL) and `git diff --check` successfully.

@@ -806,10 +806,12 @@ class TimeSheetViewModel(private val app: TimeSheetsApplication) : ViewModel() {
     // Both are FLAGGED server-side and for ever, which is the whole reason a second path is
     // allowed to exist at all — see the comments in ui/TimeSheetApp.kt.
 
-    /** Buildings the worker can pick from, from the ALREADY-CACHED roster (decision-56 §2):
-     *  no new endpoint, and no fetch on the path of a person who wants to start working. */
-    fun buildings(): List<Pair<String, String>> =
-        _log.value.locationNames.entries.sortedBy { it.value }.map { it.key to it.value }
+    /** Explicit zone choices: decision-69 retired building UUIDs as clock-in targets.
+     * Verification remains authoritative on the server, including for manual starts. */
+    fun manualPlaces(): List<WireZone> = _log.value.let { log ->
+        log.zones.filter { it.locationId in log.locationNames }
+            .sortedWith(compareBy({ log.locationNames[it.locationId] }, { it.name }))
+    }
 
     /**
      * „Ohne Tag starten“. POST /shifts/open with manual=true.

@@ -1534,14 +1534,14 @@ private fun clock(start: Instant, now: Instant): String {
 // -------------------------------------------------------------------------------------
 
 /**
- * „Ohne Tag starten". Pick a building, confirm, POST /shifts/open with manual=true.
+ * „Ohne Tag starten". Pick a zone, confirm, POST /shifts/open with manual=true.
  *
  * The list is the ALREADY-CACHED roster (no fetch, no new endpoint). An empty list means
- * this phone has never completed a refresh; it says so rather than offering nothing.
+ * no cached zones are available; the screen explains refreshing and contacting the office.
  */
 @Composable
 private fun ManualStartDialog(model: TimeSheetViewModel, onClose: () -> Unit) {
-    val buildings = model.buildings()
+    val places = model.manualPlaces()
     var selectedId by rememberSaveable { mutableStateOf<String?>(null) }
     var errorKey by remember { mutableStateOf<String?>(null) }
     var busy by remember { mutableStateOf(false) }
@@ -1570,13 +1570,15 @@ private fun ManualStartDialog(model: TimeSheetViewModel, onClose: () -> Unit) {
                     modifier = Modifier.semantics { heading() },
                 )
                 Text(stringResource(R.string.manual_start_intro))
-                if (buildings.isEmpty()) {
+                if (places.isEmpty()) {
                     Text(
-                        stringResource(R.string.manual_start_no_buildings),
+                        stringResource(R.string.manual_start_no_zones),
                         color = MaterialTheme.colorScheme.error,
                     )
                 }
-                for ((id, name) in buildings) {
+                for (place in places) {
+                    val id = place.id
+                    val name = stringResource(R.string.manual_place_label, model.siteName(id).orEmpty(), place.name)
                     OutlinedButton(
                         onClick = { selectedId = id },
                         enabled = !busy,
@@ -1599,7 +1601,7 @@ private fun ManualStartDialog(model: TimeSheetViewModel, onClose: () -> Unit) {
                     )
                 }
 
-                // THE CONFIRMATION. Disabled until a building is chosen, so the dialog
+                // THE CONFIRMATION. Disabled until a zone is chosen, so the dialog
                 // cannot be dismissed into a shift nobody named.
                 Button(
                     onClick = { start() },
