@@ -1,8 +1,9 @@
 'use client'
 
 import { useTranslations } from 'next-intl'
-import { type FormEvent, useRef } from 'react'
+import { type FormEvent, useRef, useState } from 'react'
 import { Field } from '@/components/Field'
+import { ScheduleCost } from '@/components/ScheduleCost'
 import type { Location, Worker } from '@/lib/api'
 import { type Assignment, today } from '@/lib/schedule'
 import { fromBusinessInput, toBusinessInput } from '@/lib/shifts'
@@ -47,6 +48,20 @@ export function ScheduleForm({
     : date === today()
       ? toBusinessInput(new Date(nextHour.getTime() + 7_200_000).toISOString())
       : `${date}T10:00`
+  const [preview, setPreview] = useState({
+    worker: String(assignment?.worker_id ?? ''),
+    start: initialStart,
+    end: initialEnd,
+  })
+  const start = fromBusinessInput(preview.start)
+  const end = fromBusinessInput(preview.end)
+  const validPreview =
+    start &&
+    end &&
+    end > start &&
+    toBusinessInput(start) === preview.start &&
+    toBusinessInput(end) === preview.end &&
+    Date.parse(end) - Date.parse(start) <= 86400000
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     const data = new FormData(event.currentTarget)
@@ -78,7 +93,19 @@ export function ScheduleForm({
     })
   }
   return (
-    <form id="schedule-form" className="schedule-form" onSubmit={submit}>
+    <form
+      id="schedule-form"
+      className="schedule-form"
+      onSubmit={submit}
+      onChange={(event) => {
+        const data = new FormData(event.currentTarget)
+        setPreview({
+          worker: String(data.get('worker') ?? ''),
+          start: String(data.get('starts') ?? ''),
+          end: String(data.get('ends') ?? ''),
+        })
+      }}
+    >
       <p className="muted">{t('timeZone')}</p>
       <Field id="plan-worker" label={t('worker')} required>
         <select
@@ -145,6 +172,25 @@ export function ScheduleForm({
           defaultValue={assignment?.note ?? ''}
         />
       </Field>
+      {validPreview && preview.worker ? (
+        <ScheduleCost
+          preview
+          workers={workers}
+          from={start}
+          to={end}
+          assignments={[
+            {
+              worker_id: Number(preview.worker),
+              worker_name: workers.find((w) => w.id === Number(preview.worker))?.name ?? '',
+              starts_at: start,
+              ends_at: end,
+              cancelled_at: null,
+            },
+          ]}
+        />
+      ) : (
+        <p role="status">{t('costChoose')}</p>
+      )}
     </form>
   )
 }
