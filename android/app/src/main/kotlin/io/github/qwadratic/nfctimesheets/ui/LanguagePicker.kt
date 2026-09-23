@@ -68,7 +68,7 @@ fun LanguagePicker() {
     }
 }
 
-private fun Context.activity(): Activity? = when (this) {
+internal fun Context.activity(): Activity? = when (this) {
     is Activity -> this
     is ContextWrapper -> baseContext.activity()
     else -> null

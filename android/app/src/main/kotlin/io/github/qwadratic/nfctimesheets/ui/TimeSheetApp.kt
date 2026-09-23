@@ -36,7 +36,6 @@ import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -238,7 +237,7 @@ private fun SignInScreen(model: TimeSheetViewModel, reasonKey: String?, openInte
         // rendering the instant reasonKey changes to anything else, e.g. a later failed
         // submit, which the existing gated errorKey path below already renders correctly.
         if (reasonKey == "err_no_session") {
-            Card(Modifier.fillMaxWidth()) {
+            WorkerCard(Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(14.dp)) {
                     Text(
                         stringResource(R.string.err_no_session),
@@ -974,11 +973,7 @@ private fun LogScreen(
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         item {
-            Text(
-                stringResource(R.string.worker_day_title),
-                style = MaterialTheme.typography.headlineSmall,
-                modifier = Modifier.semantics { heading() },
-            )
+            WorkerDayHeading()
         }
 
 
@@ -990,7 +985,7 @@ private fun LogScreen(
 
         if (log.unresolved.isNotEmpty()) {
             item {
-                Card(Modifier.fillMaxWidth()) {
+                WorkerCard(Modifier.fillMaxWidth()) {
                     Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         Text(
                             pluralStringResource(
@@ -1026,7 +1021,11 @@ private fun LogScreen(
         if (log.recent.isEmpty()) {
             item { Text(stringResource(R.string.log_recent_empty), color = MaterialTheme.colorScheme.onSurfaceVariant) }
         }
-        items(log.recent, key = { it.clientUuid }) { ShiftRow(it, model.siteName(it.locationId)) }
+        items(log.recent, key = { it.clientUuid }) {
+            if (it.clientUuid == log.recent.firstOrNull()?.clientUuid) {
+                ShiftCardReveal("${it.clientUuid}:${it.endTime}") { ShiftRow(it, model.siteName(it.locationId)) }
+            } else ShiftRow(it, model.siteName(it.locationId))
+        }
 
 
 
@@ -1131,6 +1130,7 @@ private fun ShiftRunningScreen(
         overdue && !funTheme -> MaterialTheme.colorScheme.errorContainer
         else -> ShiftBrand.Container
     }
+    WorkerStatusBar(container)
     val onContainer = when {
         overdue -> if (funTheme) FunShift.Overdue else MaterialTheme.colorScheme.onErrorContainer
         else -> ShiftBrand.OnContainer
@@ -1175,8 +1175,8 @@ private fun ShiftRunningScreen(
             // At 200% font scale this content is far taller than the screen, and a locked
             // screen that clips its own instructions is worse than no lock at all.
             .verticalScroll(rememberScrollState())
-            .padding(24.dp),
-        verticalArrangement = Arrangement.spacedBy(20.dp),
+            .padding(20.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Text(
@@ -1202,7 +1202,7 @@ private fun ShiftRunningScreen(
         )
 
         if (running.pendingConfirmation || syncError != null) {
-            Card(Modifier.fillMaxWidth()) {
+            WorkerCard(Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     if (running.pendingConfirmation) Text(stringResource(R.string.shift_pending_body))
                     syncError?.let {
@@ -1233,35 +1233,37 @@ private fun ShiftRunningScreen(
                 running.locationName ?: stringResource(R.string.unknown_location),
             )
         }
-        Card(
-            Modifier
-                .fillMaxWidth()
-                .semantics(mergeDescendants = true) { contentDescription = spoken },
-        ) {
-            Column(
+        ShiftCardReveal(running.startTime.toString()) {
+            WorkerCard(
                 Modifier
                     .fillMaxWidth()
-                    .padding(vertical = 28.dp, horizontal = 16.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
+                    .semantics(mergeDescendants = true) { contentDescription = spoken },
             ) {
-                Text(
-                    // No running clock on a shift the 8h timer has closed: it would be a
-                    // lie about a row that is already out of payroll until a human fixes it.
-                    if (overdue) OVERDUE_CLOCK else clock(running.startTime, now),
-                    style = MaterialTheme.typography.displayLarge,
-                    modifier = Modifier.clearAndSetSemantics { },
-                )
-                Text(
-                    stringResource(when {
-                        running.pendingConfirmation -> R.string.shift_pending_label
-                        overdue -> R.string.shift_overdue_body
-                        else -> R.string.shift_running_label
-                    }),
-                    style = MaterialTheme.typography.titleSmall,
-                    textAlign = TextAlign.Center,
-                )
+                Column(
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 28.dp, horizontal = 16.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    ShiftReceiptMark(confirmed = !running.pendingConfirmation && syncError == null && !overdue)
+                    WorkerClock(
+                        // No running clock on a shift the 8h timer has closed: it would be a
+                        // lie about a row that is already out of payroll until a human fixes it.
+                        if (overdue) OVERDUE_CLOCK else clock(running.startTime, now),
+                    )
+                    Text(
+                        stringResource(when {
+                            running.pendingConfirmation -> R.string.shift_pending_label
+                            overdue -> R.string.shift_overdue_body
+                            else -> R.string.shift_running_label
+                        }),
+                        style = MaterialTheme.typography.titleSmall,
+                        textAlign = TextAlign.Center,
+                    )
+                }
             }
+
         }
 
         // STOP (decision-56). Next to the clock, because this is the screen a worker is on
@@ -1340,7 +1342,7 @@ private fun ShiftRunningScreen(
         // A tap that cannot be delivered is worth saying even here - especially here,
         // because this is the screen the worker is on when they try to clock out.
         if (readiness != NfcReadiness.READY) {
-            NfcBanner(readiness, openIntent)
+        if (readiness != NfcReadiness.UNSUPPORTED) NfcBanner(readiness, openIntent)
         }
 
         // A shift tapped in a basement is EXACTLY the shift that is on this screen, so this
@@ -1350,7 +1352,7 @@ private fun ShiftRunningScreen(
 
         notice?.let { (from, to) ->
             val unknown = stringResource(R.string.unknown_location)
-            Card(Modifier.fillMaxWidth()) {
+            WorkerCard(Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(
                         stringResource(R.string.switch_notice, from ?: unknown, to ?: unknown),
@@ -1366,7 +1368,7 @@ private fun ShiftRunningScreen(
 
         // decision-10 may NEVER be hidden by the lock.
         if (unresolved.isNotEmpty()) {
-            Card(Modifier.fillMaxWidth()) {
+            WorkerCard(Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(
                         pluralStringResource(
@@ -1391,7 +1393,7 @@ private fun ShiftRunningScreen(
         // permission is a weaker signal, not a broken app - the screen you are reading is
         // the floor and it is unaffected.
         if (silenced) {
-            Card(Modifier.fillMaxWidth()) {
+            WorkerCard(Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(
                         stringResource(R.string.shift_notifications_off),
@@ -1417,60 +1419,6 @@ private fun ShiftRunningScreen(
             textAlign = TextAlign.Center,
         )
     }
-    }
-}
-
-@Composable
-private fun ScheduleCard(state: ScheduleState, retry: () -> Unit) {
-    var expanded by remember(state) { mutableStateOf(false) }
-    Card(Modifier.fillMaxWidth()) {
-        Column(
-            Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
-        ) {
-            Text(
-                stringResource(R.string.schedule_title),
-                style = MaterialTheme.typography.titleMedium,
-                modifier = Modifier.semantics { heading() },
-            )
-            Text(stringResource(R.string.schedule_explainer), style = MaterialTheme.typography.bodySmall)
-            when (state) {
-                ScheduleState.Loading -> Text(stringResource(R.string.schedule_loading))
-                is ScheduleState.Failed -> {
-                    Text(stringResource(if (state.offline) R.string.schedule_offline else R.string.schedule_error))
-                    TextButton(onClick = retry) { Text(stringResource(R.string.schedule_retry), color = MaterialTheme.colorScheme.onSurface) }
-                }
-                is ScheduleState.Loaded -> {
-                    if (state.assignments.isEmpty()) {
-                        Text(stringResource(R.string.schedule_empty))
-                    } else {
-                        (if (expanded) state.assignments else state.assignments.take(3)).forEach { assignment ->
-                            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                                Text(assignment.locationName, style = MaterialTheme.typography.titleSmall)
-                                Text(
-                                    if (viennaDate(assignment.startsAt) == viennaDate(assignment.endsAt)) {
-                                        stringResource(R.string.schedule_same_day, viennaDate(assignment.startsAt),
-                                            viennaTime(assignment.startsAt), viennaTime(assignment.endsAt))
-                                    } else {
-                                        stringResource(R.string.schedule_when, viennaDate(assignment.startsAt), viennaTime(assignment.startsAt),
-                                            viennaDate(assignment.endsAt), viennaTime(assignment.endsAt))
-                                    }, style = MaterialTheme.typography.bodyMedium,
-                                )
-                                if (assignment.note.isNotBlank()) Text(assignment.note,
-                                    style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            }
-                            HorizontalDivider()
-                        }
-                        if (state.assignments.size > 3) {
-                            TextButton(onClick = { expanded = !expanded }) {
-                                Text(stringResource(if (expanded) R.string.schedule_less else R.string.schedule_more), color = MaterialTheme.colorScheme.onSurface)
-                            }
-                        }
-                    }
-                    TextButton(onClick = retry) { Text(stringResource(R.string.schedule_refresh), color = MaterialTheme.colorScheme.onSurface) }
-                }
-            }
-        }
     }
 }
 
@@ -1679,46 +1627,6 @@ private fun appNotificationSettings(packageName: String): Intent =
 
 /** The idle screen has one primary action; manual starts still require confirmation. */
 @Composable
-private fun WorkerStartCard(readiness: NfcReadiness, onScan: () -> Unit, onManual: () -> Unit) {
-    val manualOnly = readiness == NfcReadiness.UNSUPPORTED
-    val ink = MaterialTheme.colorScheme.onSurface
-    val muted = MaterialTheme.colorScheme.outlineVariant
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
-        border = BorderStroke(1.dp, muted),
-    ) {
-        Column(Modifier.padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(14.dp)) {
-            Canvas(Modifier.size(64.dp)) {
-                drawCircle(muted, style = Stroke(1.dp.toPx()))
-                drawRoundRect(ink, topLeft = Offset(size.width * .34f, size.height * .2f),
-                    size = androidx.compose.ui.geometry.Size(size.width * .32f, size.height * .6f),
-                    cornerRadius = androidx.compose.ui.geometry.CornerRadius(5.dp.toPx()), style = Stroke(2.dp.toPx()))
-                drawLine(ink, Offset(size.width * .45f, size.height * .72f), Offset(size.width * .55f, size.height * .72f), 2.dp.toPx())
-            }
-            Text(stringResource(if (manualOnly) R.string.worker_start_manual_title else R.string.worker_start_title),
-                style = MaterialTheme.typography.titleLarge, textAlign = TextAlign.Center)
-            Text(stringResource(if (manualOnly) R.string.worker_start_manual_hint else R.string.log_hint_start),
-                style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Center)
-            Button(
-                onClick = if (manualOnly) onManual else onScan,
-                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.inverseSurface,
-                    contentColor = MaterialTheme.colorScheme.inverseOnSurface),
-                modifier = Modifier.fillMaxWidth().heightIn(min = 54.dp),
-                shape = RoundedCornerShape(14.dp),
-            ) { Text(stringResource(if (manualOnly) R.string.manual_start_open else R.string.scan_open)) }
-            if (!manualOnly) {
-                TextButton(onClick = onManual, modifier = Modifier.heightIn(min = 48.dp)) {
-                    Text(stringResource(R.string.manual_start_open), color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-            }
-        }
-    }
-}
-
-@Composable
 private fun NfcBanner(readiness: NfcReadiness, openIntent: (Intent) -> Unit) {
     val (title, body, action) = when (readiness) {
         NfcReadiness.UNSUPPORTED -> Triple(R.string.nfc_missing_title, R.string.nfc_missing_body, null)
@@ -1727,7 +1635,7 @@ private fun NfcBanner(readiness: NfcReadiness, openIntent: (Intent) -> Unit) {
             Triple(R.string.nfc_blocked_title, R.string.nfc_blocked_body, R.string.nfc_blocked_action)
         NfcReadiness.READY -> return
     }
-    Card(Modifier.fillMaxWidth()) {
+    WorkerCard(Modifier.fillMaxWidth()) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             Text(
                 stringResource(title),
@@ -1778,7 +1686,7 @@ private fun NfcBanner(readiness: NfcReadiness, openIntent: (Intent) -> Unit) {
 private fun PendingCard(pending: PendingWork.Summary, signedOut: Boolean = false, armed: Boolean = true) {
     if (pending.isEmpty) return
     val spoken = pluralStringResource(R.plurals.a11y_pending, pending.total, pending.total)
-    Card(
+    WorkerCard(
         Modifier
             .fillMaxWidth()
             .semantics(mergeDescendants = true) { contentDescription = spoken },
@@ -1858,70 +1766,72 @@ private fun PendingCard(pending: PendingWork.Summary, signedOut: Boolean = false
  */
 @Composable
 private fun ShiftRow(shift: LocalShift, siteName: String?) {
-    Column(Modifier.fillMaxWidth().padding(vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        Row(
-            Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(
-                siteName ?: stringResource(R.string.unknown_location),
-                style = MaterialTheme.typography.titleMedium,
-            )
-            val status = when {
-                shift.isOpen -> R.string.status_running
-                shift.needsResolution -> R.string.status_auto_closed
-                shift.correctedAt != null -> R.string.status_corrected
-                else -> null
-            }
-            status?.let {
+    WorkerCard(Modifier.fillMaxWidth()) {
+        Column(Modifier.fillMaxWidth().padding(18.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Row(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
                 Text(
-                    stringResource(it),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = if (shift.needsResolution) {
+                    siteName ?: stringResource(R.string.unknown_location),
+                    style = MaterialTheme.typography.titleMedium,
+                    modifier = Modifier.weight(1f),
+                )
+                val status = when {
+                    shift.isOpen -> R.string.status_running
+                    shift.needsResolution -> R.string.status_auto_closed
+                    shift.correctedAt != null -> R.string.status_corrected
+                    else -> null
+                }
+                status?.let {
+                    Text(
+                        stringResource(it),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = if (shift.needsResolution) {
+                            MaterialTheme.colorScheme.error
+                        } else {
+                            MaterialTheme.colorScheme.tertiary
+                        },
+                    )
+                }
+            }
+
+            Text(dateTime(shift.startTime), style = MaterialTheme.typography.bodySmall)
+            shift.durationSeconds?.let {
+                Text(
+                    stringResource(R.string.duration_format, (it / 3600).toInt(), ((it % 3600) / 60).toInt()),
+                    style = MaterialTheme.typography.bodySmall,
+                )
+            }
+
+            val syncKey = shift.syncError
+            when {
+                syncKey != null -> Text(
+                    stringResource(stringIdFor(syncKey)),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = if (shift.syncBlocked) {
                         MaterialTheme.colorScheme.error
                     } else {
                         MaterialTheme.colorScheme.tertiary
                     },
                 )
+                shift.isFullySynced -> Text(stringResource(R.string.sync_sent), style = MaterialTheme.typography.bodySmall)
+                // "Wird gesendet …" was a lie for the case that matters: a row taken in a
+                // basement is not being sent, it is WAITING, and the difference is the whole
+                // of TASK-225. The last attempt rides on the same line so the worker can tell
+                // "the phone is trying and failing" from "the phone has not had a signal since".
+                else -> {
+                    Text(stringResource(R.string.sync_waiting), style = MaterialTheme.typography.bodySmall)
+                    Text(
+                        shift.lastAttemptAt?.let { stringResource(R.string.sync_last_try, timeOfDay(it)) }
+                            ?: stringResource(R.string.sync_never_tried),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
             }
         }
-
-        Text(dateTime(shift.startTime), style = MaterialTheme.typography.bodySmall)
-        shift.durationSeconds?.let {
-            Text(
-                stringResource(R.string.duration_format, (it / 3600).toInt(), ((it % 3600) / 60).toInt()),
-                style = MaterialTheme.typography.bodySmall,
-            )
-        }
-
-        val syncKey = shift.syncError
-        when {
-            syncKey != null -> Text(
-                stringResource(stringIdFor(syncKey)),
-                style = MaterialTheme.typography.bodySmall,
-                color = if (shift.syncBlocked) {
-                    MaterialTheme.colorScheme.error
-                } else {
-                    MaterialTheme.colorScheme.tertiary
-                },
-            )
-            shift.isFullySynced -> Text(stringResource(R.string.sync_sent), style = MaterialTheme.typography.bodySmall)
-            // "Wird gesendet …" was a lie for the case that matters: a row taken in a
-            // basement is not being sent, it is WAITING, and the difference is the whole
-            // of TASK-225. The last attempt rides on the same line so the worker can tell
-            // "the phone is trying and failing" from "the phone has not had a signal since".
-            else -> {
-                Text(stringResource(R.string.sync_waiting), style = MaterialTheme.typography.bodySmall)
-                Text(
-                    shift.lastAttemptAt?.let { stringResource(R.string.sync_last_try, timeOfDay(it)) }
-                        ?: stringResource(R.string.sync_never_tried),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-        }
-        HorizontalDivider()
     }
 }
 
@@ -2107,7 +2017,7 @@ private fun MaterialScreen(model: TimeSheetViewModel) {
             item { SectionHeading(R.string.material_ready_section) }
             items(state.unseenArrivals, key = { "ready-${it.id}" }) { request ->
                 val what = request.itemName ?: request.body
-                Card(Modifier.fillMaxWidth()) {
+                WorkerCard(Modifier.fillMaxWidth()) {
                     Column(
                         Modifier.padding(14.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp),
@@ -2138,9 +2048,10 @@ private fun MaterialScreen(model: TimeSheetViewModel) {
         }
 
         item {
-            Card(Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+            WorkerCard(Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
                 border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)) {
                 Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                    WorkerIllustration(WorkerPicture.SUPPLIES)
                     SectionHeading(R.string.material_ask_section)
                     OutlinedTextField(
                         value = typed,
@@ -2150,7 +2061,7 @@ private fun MaterialScreen(model: TimeSheetViewModel) {
                         },
                         label = { Text(stringResource(R.string.material_input_label)) },
                         supportingText = { Text(stringResource(R.string.material_input_hint)) },
-                        minLines = 3,
+                        minLines = 2,
                         maxLines = 8,
                         keyboardOptions = KeyboardOptions(
                             capitalization = KeyboardCapitalization.Sentences,
@@ -2185,7 +2096,7 @@ private fun MaterialScreen(model: TimeSheetViewModel) {
                         },
                         enabled = MaterialQueue.normalise(typed) != null,
                         modifier = Modifier.fillMaxWidth().heightIn(min = 54.dp),
-                        shape = RoundedCornerShape(14.dp),
+                        shape = RoundedCornerShape(18.dp),
                         colors = ButtonDefaults.buttonColors(
                             containerColor = MaterialTheme.colorScheme.inverseSurface,
                             contentColor = MaterialTheme.colorScheme.inverseOnSurface,
@@ -2413,9 +2324,9 @@ private fun SettingsScreen(model: TimeSheetViewModel, openIntent: (Intent) -> Un
             modifier = Modifier.semantics { heading() },
         )
 
-        Card(Modifier.fillMaxWidth()) {
+        WorkerCard(Modifier.fillMaxWidth()) {
             Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(worker?.name.orEmpty(), style = MaterialTheme.typography.titleLarge)
+                WorkerIdentity(worker?.name.orEmpty())
                 HorizontalDivider()
                 RowLink(stringResource(R.string.myhours_open)) { showMyHours = true }
                 if (log.open == null) {
@@ -2424,10 +2335,10 @@ private fun SettingsScreen(model: TimeSheetViewModel, openIntent: (Intent) -> Un
                 }
             }
         }
-        Card(Modifier.fillMaxWidth()) {
+        WorkerCard(Modifier.fillMaxWidth()) {
             Column(Modifier.padding(18.dp)) { LanguagePicker() }
         }
-        Card(Modifier.fillMaxWidth()) {
+        WorkerCard(Modifier.fillMaxWidth()) {
             Column(Modifier.padding(18.dp)) {
                 RevealSection(label = { Text(stringResource(R.string.settings_push_title)) }) { PushSection(model) }
             }
@@ -2722,7 +2633,7 @@ private val viennaTimeFormat: DateTimeFormatter =
     DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT).withZone(viennaZone)
 
 @Composable
-private fun viennaDate(instant: Instant): String = viennaDateFormat.withLocale(AppLanguage.locale(LocalContext.current)).format(instant)
+internal fun viennaDate(instant: Instant): String = viennaDateFormat.withLocale(AppLanguage.locale(LocalContext.current)).format(instant)
 
 @Composable
-private fun viennaTime(instant: Instant): String = viennaTimeFormat.withLocale(AppLanguage.locale(LocalContext.current)).format(instant)
+internal fun viennaTime(instant: Instant): String = viennaTimeFormat.withLocale(AppLanguage.locale(LocalContext.current)).format(instant)

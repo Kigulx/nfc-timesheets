@@ -640,8 +640,9 @@
     <string name="schedule_less">Weniger anzeigen</string>
     <string name="worker_day_title">Ihr Arbeitstag</string>
     <string name="worker_start_title">Bereit für die Schicht?</string>
-    <string name="worker_start_manual_title">Schicht ohne NFC starten</string>
-    <string name="worker_start_manual_hint">Wählen Sie Ihren Arbeitsbereich. Der Start ohne Tag wird für das Büro gekennzeichnet.</string>
+    <string name="worker_start_manual_title">Bereit für Ihren Einsatz?</string>
+    <string name="worker_start_manual_hint">Wählen Sie Ihren Arbeitsbereich. Ohne NFC wird der Start für das Büro gekennzeichnet.</string>
     <string name="schedule_same_day">%1$s · %2$s–%3$s</string>
     <string name="worker_stop_manual_hint">Beenden Sie Ihre Schicht über „Ohne Tag beenden“.</string>
+    <string name="worker_schedule_note">Geplant · Arbeitszeit separat erfassen</string>
 </resources>

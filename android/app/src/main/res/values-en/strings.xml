@@ -511,8 +511,9 @@
     <string name="schedule_less">Show less</string>
     <string name="worker_day_title">Your working day</string>
     <string name="worker_start_title">Ready for your shift?</string>
-    <string name="worker_start_manual_title">Start a shift without NFC</string>
-    <string name="worker_start_manual_hint">Choose your work area. The office will see that you started without a tag.</string>
+    <string name="worker_start_manual_title">Ready for your next shift?</string>
+    <string name="worker_start_manual_hint">Choose your work area. Without NFC, this start is marked for the office.</string>
     <string name="schedule_same_day">%1$s · %2$s–%3$s</string>
     <string name="worker_stop_manual_hint">Use “Finish without a tag” to finish your shift.</string>
+    <string name="worker_schedule_note">Planned · Clock in separately</string>
 </resources>
