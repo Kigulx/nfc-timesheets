@@ -32,7 +32,7 @@ export default function SchedulePage() {
   const [loading, setLoading] = useState(true)
   const [pending, setPending] = useState(false)
   const [error, setError] = useState('')
-  const [notice, setNotice] = useState('')
+  const [notice, setNotice] = useState<'' | 'saved' | 'cancelledNotice'>('')
   const [truncated, setTruncated] = useState(false)
   const [filter, setFilter] = useState('')
   const [revision, setRevision] = useState(0)
@@ -92,7 +92,7 @@ export default function SchedulePage() {
       })
       setEditor(null)
       setWeek(weekStart(toBusinessInput(plan.starts_at).slice(0, 10)))
-      setNotice(t('saved'))
+      setNotice('saved')
       setRevision((value) => value + 1)
     } catch (cause) {
       setFormError(failure(cause))
@@ -110,7 +110,7 @@ export default function SchedulePage() {
         body: { version: cancel.version },
       })
       setCancel(null)
-      setNotice(t('cancelledNotice'))
+      setNotice('cancelledNotice')
       setRevision((value) => value + 1)
     } catch (cause) {
       setError(failure(cause))
@@ -222,7 +222,7 @@ export default function SchedulePage() {
           {t('refresh')}
         </button>
       </div>
-      <p role="status">{notice}</p>
+      <p role="status">{notice ? t(notice) : ''}</p>
       <div role="alert" className="form-error">
         {error}
       </div>

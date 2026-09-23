@@ -4,7 +4,7 @@ title: Plan cleaning assignments in admin and show worker schedule in Android
 status: Done
 assignee: []
 created_date: '2026-09-23 15:43'
-updated_date: '2026-09-23 16:25'
+updated_date: '2026-09-23 16:33'
 labels: []
 dependencies: []
 ordinal: 262000
@@ -29,6 +29,12 @@ Company administrators assign workers to locations and time windows; workers see
 <!-- SECTION:PLAN:BEGIN -->
 Add planned_shifts table with FORCE RLS and composite tenant FKs, transactional overlap checks, admin schedule screen and worker API/Android home card. Test cross-company and concurrency paths and review all ADRs.
 <!-- SECTION:PLAN:END -->
+
+## Implementation Notes
+
+<!-- SECTION:NOTES:BEGIN -->
+Final browser pass found status notice retained previous language after switching DE/EN. Store message key and translate at render; verified saved notice switches live between Einsatz gespeichert and Assignment saved. Rebuilt web; lint/types/build pass; pnpm verify retains same four baseline Windows path failures.
+<!-- SECTION:NOTES:END -->
 
 ## Final Summary
 
