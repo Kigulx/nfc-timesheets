@@ -1408,13 +1408,19 @@ private fun enrolmentAgainstServer() {
 private fun smsSignIn() {
     check(serverAuthRoute.exists(), "server/routes/auth.js is readable from android/")
     if (serverAuthRoute.exists()) {
-        val route = serverAuthRoute.readText()
-        for (line in listOf(
-            """{ method: "GET", path: "/auth/capabilities", auth: "app", handler: capabilities },""",
-            """{ method: "POST", path: "/auth/sms/request", auth: "app", handler: smsRequest },""",
-            """{ method: "POST", path: "/auth/sms/verify", auth: "app", handler: smsVerify },""",
+        val route = serverAuthRoute.readText().substringAfter("export const authRoutes =")
+        val entries = Regex("""\{[^{}]*}""").findAll(route).map { it.value }.toList()
+        for ((method, path, handler) in listOf(
+            Triple("GET", "/auth/capabilities", "capabilities"),
+            Triple("POST", "/auth/sms/request", "smsRequest"),
+            Triple("POST", "/auth/sms/verify", "smsVerify"),
         )) {
-            check(route.contains(line), "server/routes/auth.js no longer serves: $line")
+            fun field(key: String, value: String) = Regex("""\b$key\s*:\s*${Regex.escape(value)}\s*[,}]""")
+            val entry = entries.singleOrNull { field("path", "\"$path\"").containsMatchIn(it) }
+            check(entry != null && listOf(
+                field("method", "\"$method\""), field("auth", "\"app\""),
+                field("handler", handler), field("bootstrap", "true"),
+            ).all { it.containsMatchIn(entry) }, "server auth contract changed: $method $path")
         }
     }
 
@@ -2386,7 +2392,7 @@ private fun theWriteSurface() {
                 "$forbidden is CALLED in ${file.path} — tags stay unlocked (decision-15) and locking a card cannot be undone",
             )
         }
-        if (code.contains("writeNdefMessage")) writers += file.path
+        if (code.contains("writeNdefMessage")) writers += file.invariantSeparatorsPath
     }
 
     // The control. If the sweep or the comment stripper ever stops seeing code, this is the
