@@ -86,7 +86,7 @@ fun TimeSheetsTheme(content: @Composable () -> Unit) {
             extraLarge = RoundedCornerShape(32.dp),
         ),
         typography = base.copy(
-            headlineSmall = base.headlineSmall.copy(fontSize = 28.sp, lineHeight = 33.sp, fontWeight = FontWeight.Bold, letterSpacing = (-0.7).sp),
+            headlineSmall = base.headlineSmall.copy(fontSize = 28.sp, lineHeight = 33.sp, fontWeight = FontWeight.SemiBold, letterSpacing = (-0.5).sp),
             titleLarge = base.titleLarge.copy(fontWeight = FontWeight.SemiBold),
             titleMedium = base.titleMedium.copy(fontWeight = FontWeight.SemiBold),
             labelLarge = base.labelLarge.copy(fontWeight = FontWeight.SemiBold),

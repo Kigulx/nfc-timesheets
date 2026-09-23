@@ -1,50 +1,32 @@
 package io.github.qwadratic.nfctimesheets.ui
 
 import androidx.compose.foundation.isSystemInDarkTheme
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardColors
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.SideEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
 import androidx.core.view.WindowCompat
-import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.scale
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 
 /** Worker surfaces share one geometry; semantic warning colours still belong to callers. */
 @Composable
@@ -54,22 +36,7 @@ internal fun WorkerCard(
     border: BorderStroke? = null,
     content: @Composable ColumnScope.() -> Unit,
 ) {
-    Card(modifier, shape = RoundedCornerShape(26.dp), colors = colors, border = border, content = content)
-}
-
-/** One finite entrance, keyed to the actual shift. Compose observes Android's duration scale.
- * The content exists immediately: animation cannot gate writes, actions or accessibility. */
-@Composable
-internal fun ShiftCardReveal(identity: String, content: @Composable () -> Unit) {
-    var entered by rememberSaveable(identity) { mutableStateOf(false) }
-    val progress by animateFloatAsState(if (entered) 1f else 0f, tween(320), label = "shift-card-reveal")
-    LaunchedEffect(identity) { entered = true }
-    Box(Modifier.fillMaxWidth().graphicsLayer {
-        translationY = (1f - progress) * 28.dp.toPx()
-        alpha = .65f + .35f * progress
-        scaleX = .97f + .03f * progress
-        scaleY = scaleX
-    }) { content() }
+    Card(modifier, shape = RoundedCornerShape(18.dp), colors = colors, border = border, content = content)
 }
 
 internal enum class WorkerPicture { ENTRANCE, SUPPLIES }
@@ -126,38 +93,6 @@ internal fun WorkerIllustration(picture: WorkerPicture, modifier: Modifier = Mod
 
             }
         }
-    }
-}
-
-/** A check is reserved for server-confirmed time. Pending/error states get a neutral clock. */
-@Composable
-internal fun ShiftReceiptMark(confirmed: Boolean) {
-    val ink = MaterialTheme.colorScheme.onSurface
-    val soft = MaterialTheme.colorScheme.surfaceContainerHigh
-    val checkOpacity by animateFloatAsState(if (confirmed) 1f else 0f, tween(180), label = "shift-confirmation")
-    Canvas(Modifier.size(44.dp).clearAndSetSemantics { }) {
-        drawCircle(soft)
-        val u = size.width
-        if (confirmed) {
-            drawPath(Path().apply { moveTo(u*.28f,u*.5f); lineTo(u*.44f,u*.66f); lineTo(u*.73f,u*.35f) },
-                ink, alpha = checkOpacity, style = Stroke(2.5.dp.toPx(), cap=StrokeCap.Round))
-        } else {
-            drawCircle(ink, u*.22f, style=Stroke(2.dp.toPx()))
-            drawLine(ink, center, Offset(u*.5f,u*.36f), 2.dp.toPx(), StrokeCap.Round)
-            drawLine(ink, center, Offset(u*.62f,u*.55f), 2.dp.toPx(), StrokeCap.Round)
-        }
-    }
-}
-
-/** Tabular figures stay on one line even at 200% text size. Other instructions still scale. */
-@Composable
-internal fun WorkerClock(value: String) {
-    val fontScale = LocalDensity.current.fontScale
-    BoxWithConstraints(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-        val fittedSize = minOf(56f, maxWidth.value / (value.length * .64f * fontScale)).sp
-        Text(value, fontSize = fittedSize, lineHeight = fittedSize * 1.2f,
-            fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Medium,
-            maxLines = 1, modifier = Modifier.clearAndSetSemantics { })
     }
 }
 

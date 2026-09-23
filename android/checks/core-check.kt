@@ -2815,21 +2815,21 @@ private fun theBackgroundPush() {
     )
     val app = File("app/src/main/kotlin/io/github/qwadratic/nfctimesheets/ui/TimeSheetApp.kt").readText()
     check(
-        app.contains("PendingCard(pending.pending, signedOut = true"),
+        app.contains("DeliveryStatus(pending.pending, signedOut = true"),
         "the SIGN-IN screen shows what is still queued",
     )
-    check(app.contains("PendingCard(pending, armed ="), "the SHIFT screen shows it — the screen a basement tap lands on")
-    check(app.contains("item { PendingCard(log.pending, armed ="), "the LOG screen shows it")
+    check(app.contains("DeliveryStatus(pending, armed ="), "the SHIFT screen shows it — the screen a basement tap lands on")
+    check(app.contains("item { DeliveryStatus(log.pending, armed ="), "the LOG screen shows it")
 
     // EVERY CALL SITE MUST PASS `armed`, and this counts them rather than naming them: the
     // default is `true`, so a fourth card added without the argument would silently promise
     // automatic delivery on a phone where the platform is holding no job. That promise was
     // false on every device until the ACCESS_NETWORK_STATE fix, and nothing could say so.
-    val cards = Regex("""PendingCard\(""").findAll(app).count() - 1 // minus the declaration
-    val armedArgs = Regex("""PendingCard\([^)]*armed =""").findAll(app).count()
+    val cards = Regex("""DeliveryStatus\(""").findAll(app).count() // declaration lives in DeliveryStatus.kt
+    val armedArgs = Regex("""DeliveryStatus\([^)]*armed =""").findAll(app).count()
     check(
         cards == 3 && armedArgs == 3,
-        "all $cards PendingCard call sites are told whether the platform is actually " +
+        "all $cards DeliveryStatus call sites are told whether the platform is actually " +
             "holding the job ($armedArgs pass `armed`) — the default is `true`, i.e. a promise",
     )
     val vm = model
@@ -2839,7 +2839,7 @@ private fun theBackgroundPush() {
     )
 
     // AN EMPTY QUEUE MUST SCHEDULE NOTHING, and this counts the call sites rather than
-    // naming them, for the same reason the PendingCard check above does.
+    // naming them, for the same reason the DeliveryStatus check above does.
     //
     // SyncScheduler's contract says it in one sentence — "a phone with an empty queue
     // schedules nothing at all and costs no battery" — and two call sites broke it:

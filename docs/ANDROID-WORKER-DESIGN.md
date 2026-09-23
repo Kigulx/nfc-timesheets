@@ -1,50 +1,83 @@
-# Android worker design: Calm Route
+# Android worker design: Blue Hour
 
-TASK-360, 23 September 2026. Scope: the worker experience and its scan fallback.
+TASK-363, 23 September 2026. Replaces TASK-360's rejected Calm Route presentation.
+Scope: the worker shift flow, delivery status, receipt and shared Android presentation.
 
-The owner's reference is the rounded phone layout in the local Calm Order concept.
-The independent design critic compared three directions before implementation:
+## Design brief
+
+Design for a cleaner checking a phone for two seconds at a building entrance. Answer in
+order: is my shift running, how much time has elapsed, has the office received it, what
+can I do next? Start with a new composition rather than restyling the old timer card.
+Use proportional Android sans typography, clear actions, restrained vector illustration
+and one finite payment-like confirmation. Never let animation imply server acceptance
+of a locally queued event. Keep pending hours visible without exposing retry mechanics
+on the main screen. Support German, English, large text, dark mode and reduced motion.
+
+An independent Sol designer compared three directions:
 
 | Direction | Strength | Trade-off | Choice |
 | --- | --- | --- | --- |
-| Calm Route | Clear primary action, soft neutral surfaces, compact entrance illustration, one next assignment | Less decorative than a marketing page | Selected |
-| Working Route | A vertical timeline helps multi-site days | Dense and harder at 200% text; clock-in competes with planning | Borrow only compact upcoming assignment presentation |
-| Illustrated Journal | Warm paper and character illustrations feel friendly | Large characters compete with instructions; decorative colour can obscure shift state | Not selected for the working app |
+| Blue Hour | Time directly on a quiet fixed-blue field; clear hierarchy | Needs strong contrast and compact secondary information | Selected |
+| Paper Route | Neutral editorial timeline, useful for multi-site planning | A timeline competes with the one current action | Not selected |
+| Dial | Circular timer naturally suggests contactless interaction | A persistent ring implies a target/countdown that does not exist | Borrow only the brief confirmation ring |
 
-## Presentation
+## Final composition
 
-- Cards have 26dp corners, consistent internal spacing and theme-based surfaces.
-- The main heading uses a clear 28sp hierarchy, with a localized day/date above it.
-- Native vector scenes show an entrance with a tag and phone, and a cleaning-supplies basket.
-  They need no downloads, libraries or image decoding. Decorative drawings and initials are
-  excluded from accessibility announcements; all instructions remain real localized text.
-- A dark primary action is at least 54dp high. Controls remain at least 48dp high.
-- The schedule initially shows one upcoming assignment; all assignments and refresh remain
-  reachable. A short note explicitly distinguishes planned work from recorded hours.
-- Materials, account, language, pending-delivery and history cards use the same visual rules.
-- Brand colour roles remain fixed, independent of wallpaper. The running field remains the
-  fixed blue required by decision-60. Its optional animated backdrop stays feature-gated.
+- Running uses decision-60's fixed blue field, with a small state heading, subordinate
+  24sp site, start time and large proportional hour/minute numerals. Seconds are smaller.
+  There is no white timer card. An explicit state word remains below time (decision-60).
+- Timer figures use the font's tabular-number feature, not a monospace font. Actual
+  Compose text measurements fit the width under Android's nonlinear font scaling.
+- Tap scanning is the primary action on NFC-capable phones. Manual stop stays reachable
+  and still opens the existing confirmation. Unsupported phones use a clock glyph and
+  a clear manual action rather than suggesting a tag read they cannot perform.
+- Running schedules are a short planned-assignment row. Full details expand deliberately.
+  Help opens a dialog. Neither occupies a large white block on the default running view.
+- Idle has a date/page heading, one focused glyph and action, then pending status,
+  upcoming work and recent receipts. Neutral shared surfaces have 18dp corners.
+- Recent finishes have a receipt: site, start/end, duration, correction state and delivery
+  state. A receipt entered within two minutes stays until Continue; it does not disappear
+  during reading. Passive tag handling and bottom navigation remain available.
+- Idle reuses the compact planned-assignment summary. Materials has a flat composer with
+  a small vector header, concise visible no-push note and detailed explanation on demand.
+  Account retains its functions and shares the typography, surfaces and navigation.
+  No new backend or persistence architecture is introduced.
 
-## Motion and honest state
+## Confirmation motion
 
-The persisted shift is the source of the time card, never an animation callback. The card
-moves upward 28dp and settles from 97% to full scale over 320ms. Compose's animation clock
-observes Android's duration scale, including zero. Content, semantics and controls exist
-immediately; no write or network action waits for the animation.
+Motion begins only after a clean server ACK. The local write, timer semantics and controls
+already exist; no animation callback writes a shift or changes accounting/navigation.
 
-The entrance is keyed by the shift's start time and remembered through saved UI state.
-Returning from another tab or recreating the activity does not create another shift.
-The newest completed row uses the same finite entrance after clock-out. There is no new
-infinite animation on the idle screen.
+| Stage | Visual |
+| --- | --- |
+| 0–430ms | Fine ring draws in one turn, with a restrained scale change |
+| 390–570ms | A check stroke draws inside the ring |
+| 600–720ms | Check and ring fade upward |
+| 720–900ms | Time or completed receipt fades upward into its stable position |
 
-A neutral clock represents pending/error/overdue states; the decorative check appears only
-when the open shift is confirmed and has no synchronization error. Existing pending text,
-error details, manual confirmations, timeout resolution and retry actions remain visible.
-The timer uses tabular digits fitted to the available width so large text cannot clip time.
+Check and digits do not overlap. Android's animator duration scale applies, including zero.
+A presentation-only preference consumes each receipt identity before motion; recreation,
+tab return and ordinary resume show the stable state. Clock-in and clock-out consumption
+are separate. Restored old shifts update without an entrance animation. The eligibility
+window is 45 seconds from the event; late delivery is still confirmed in text but does not
+celebrate an old event. Pending or failed states never show the confirmation check.
 
-## Review and evidence
+## Delivery status
 
-Build and actual emulator verification are recorded in TASK-360 and the local report under
-`captures/company-workspaces/android-polish/`. Concept descriptions are design proposals;
-screenshots are actual APK captures. NFC intent simulation exercises the app's routing and
-shift UI, but cannot prove physical radio/card reading on an emulator.
+Waiting and rejected counts have separate persistent, tappable rows. Details open a sheet
+with the counts, oldest start and last attempt. Rejected records explicitly require the
+office and do not promise automatic retry. Waiting records distinguish an armed scheduler,
+an unarmed scheduler and signed-out state. The Android force-stop limitation belongs in
+these details. Dismissing details does not dismiss or delete queued records.
+
+## Preserved invariants and verification
+
+Manual start/stop confirmations, correction markers, eight-hour resolution, operator
+version-tap entry, authenticated identity and NFC/zone verification remain intact. No new
+library, networking path, endpoint, database migration or release-only behavior is added.
+All new worker-facing copy ships in German default and English together.
+
+Build and runtime evidence lives under `captures/company-workspaces/android-reset/`:
+selected brief, independent review, emulator screenshots, videos, runtime matrix and check
+logs. The emulator can exercise injected tag intents and a real local API/Postgres fixture;
+it cannot prove physical NFC reading. Production and Google Play were not updated.

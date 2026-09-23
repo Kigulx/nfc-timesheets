@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -28,6 +29,7 @@ import androidx.compose.foundation.shape.CircleShape
 import kotlinx.coroutines.delay
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
+import androidx.compose.ui.graphics.Color
 
 @Composable
 internal fun WorkerDayHeading() {
@@ -59,28 +61,43 @@ internal fun WorkerIdentity(name: String) {
 @Composable
 internal fun WorkerStartCard(readiness: NfcReadiness, onScan: () -> Unit, onManual: () -> Unit) {
     val manualOnly = readiness == NfcReadiness.UNSUPPORTED
-    WorkerCard(Modifier.fillMaxWidth()) {
-        Column(Modifier.padding(horizontal = 22.dp, vertical = 16.dp), horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            WorkerIllustration(WorkerPicture.ENTRANCE)
-            Text(stringResource(if (manualOnly) R.string.worker_start_manual_title else R.string.worker_start_title),
-                style = MaterialTheme.typography.titleLarge, textAlign = TextAlign.Center)
-            Text(stringResource(if (manualOnly) R.string.worker_start_manual_hint else R.string.log_hint_start),
-                style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Center)
-            Button(
-                onClick = if (manualOnly) onManual else onScan,
-                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.inverseSurface,
-                    contentColor = MaterialTheme.colorScheme.inverseOnSurface),
-                modifier = Modifier.fillMaxWidth().heightIn(min = 54.dp),
-                shape = RoundedCornerShape(18.dp),
-            ) { Text(stringResource(if (manualOnly) R.string.manual_start_open else R.string.scan_open)) }
-            if (!manualOnly) {
-                TextButton(onClick = onManual, modifier = Modifier.heightIn(min = 48.dp)) {
-                    Text(stringResource(R.string.manual_start_open), color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-            }
+    Column(Modifier.fillMaxWidth().padding(vertical = 16.dp), horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        EntranceMark(manualOnly)
+        Text(stringResource(if (manualOnly) R.string.worker_start_manual_title else R.string.worker_start_title),
+            style = MaterialTheme.typography.titleLarge, textAlign = TextAlign.Center)
+        Text(stringResource(if (manualOnly) R.string.worker_start_manual_hint else R.string.log_hint_start),
+            style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center)
+        Button(onClick = if (manualOnly) onManual else onScan,
+            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.inverseSurface,
+                contentColor = MaterialTheme.colorScheme.inverseOnSurface),
+            modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp), shape = RoundedCornerShape(16.dp),
+        ) { Text(stringResource(if (manualOnly) R.string.manual_start_open else R.string.scan_open)) }
+        if (!manualOnly) TextButton(onClick = onManual, modifier = Modifier.heightIn(min = 48.dp)) {
+            Text(stringResource(R.string.manual_start_open), color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
+    }
+}
+
+@Composable
+internal fun EntranceMark(manual: Boolean = false) {
+    val ink = MaterialTheme.colorScheme.onSurface
+    val soft = MaterialTheme.colorScheme.surfaceContainerHigh
+    Canvas(Modifier.size(88.dp).clearAndSetSemantics { }) {
+        drawCircle(soft)
+        val u = size.width
+        if (manual) {
+            drawCircle(ink, u*.25f, style = Stroke(2.dp.toPx()))
+            drawLine(ink,center,Offset(u*.5f,u*.32f),2.dp.toPx(),StrokeCap.Round)
+            drawLine(ink,center,Offset(u*.64f,u*.57f),2.dp.toPx(),StrokeCap.Round)
+            return@Canvas
+        }
+        drawRoundRect(ink, Offset(u*.35f,u*.23f), Size(u*.3f,u*.54f),
+            androidx.compose.ui.geometry.CornerRadius(u*.045f), style = Stroke(2.dp.toPx()))
+        drawLine(ink,Offset(u*.45f,u*.7f),Offset(u*.55f,u*.7f),2.dp.toPx(),StrokeCap.Round)
+        drawArc(ink,-45f,90f,false,Offset(u*.62f,u*.29f),Size(u*.2f,u*.3f),style=Stroke(1.6.dp.toPx(),cap=StrokeCap.Round))
+        drawArc(ink,-45f,90f,false,Offset(u*.62f,u*.34f),Size(u*.1f,u*.2f),style=Stroke(1.6.dp.toPx(),cap=StrokeCap.Round))
     }
 }
 
@@ -135,6 +152,31 @@ internal fun ScheduleCard(state: ScheduleState, retry: () -> Unit) {
                 }
             }
         }
+    }
+}
+
+/** One planned assignment at a glance; full schedule and retry remain one tap away. */
+@Composable
+internal fun WorkerScheduleSummary(state: ScheduleState, retry: () -> Unit, ink: Color = MaterialTheme.colorScheme.onSurface) {
+    var expanded by rememberSaveable { mutableStateOf(false) }
+    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        HorizontalDivider(color = ink.copy(alpha = .25f))
+        TextButton(onClick = { expanded = !expanded }, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
+            colors = ButtonDefaults.textButtonColors(contentColor = ink)) {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                Text(stringResource(R.string.worker_planned), modifier = Modifier.weight(1f))
+                Text(stringResource(if (expanded) R.string.worker_hide else R.string.worker_show))
+            }
+        }
+        val next = (state as? ScheduleState.Loaded)?.assignments?.firstOrNull()
+        if (!expanded && next != null) {
+            Text(next.locationName, color = ink, style = MaterialTheme.typography.titleMedium)
+            Text(if (viennaDate(next.startsAt) == viennaDate(next.endsAt)) {
+                stringResource(R.string.schedule_same_day, viennaDate(next.startsAt), viennaTime(next.startsAt), viennaTime(next.endsAt))
+            } else stringResource(R.string.schedule_when, viennaDate(next.startsAt), viennaTime(next.startsAt), viennaDate(next.endsAt), viennaTime(next.endsAt)),
+                color = ink.copy(alpha = .8f), style = MaterialTheme.typography.bodySmall)
+        }
+        if (expanded) ScheduleCard(state, retry)
     }
 }
 

@@ -79,7 +79,7 @@ data class LogState(
      * It defaults to true because "nothing is waiting" is the ordinary state and the card
      * that reads this is hidden then anyway. It matters only when something IS waiting:
      * false there means the sentence „wird automatisch gesendet … auch wenn die App
-     * geschlossen ist" is a LIE on this phone, and [PendingCard] must print the other
+     * geschlossen ist" is a LIE on this phone, and [DeliveryStatus] must print the other
      * sentence instead. The app shipped once with every schedule() silently refused for a
      * missing permission, and no screen and no check could say so.
      */

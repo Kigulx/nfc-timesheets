@@ -166,7 +166,7 @@
     <string name="pending_last_try">Zuletzt versucht: %1$s</string>
     <string name="pending_never_tried">Noch kein Sendeversuch – dieses Telefon hatte seither kein Internet.</string>
     <!-- %1$s = Datum und Uhrzeit der ältesten noch offenen Schicht -->
-    <string name="pending_oldest">Älteste offene Schicht: %1$s</string>
+    <string name="pending_oldest">Frühester Schichtbeginn: %1$s</string>
     <!-- Terminal: niemand versucht das noch einmal, hier muss ein Mensch ran. Steht in der
          Fehlerfarbe UND sagt es im Text – Farbe ist immer das zweite Signal. -->
     <plurals name="pending_blocked">
@@ -643,6 +643,35 @@
     <string name="worker_start_manual_title">Bereit für Ihren Einsatz?</string>
     <string name="worker_start_manual_hint">Wählen Sie Ihren Arbeitsbereich. Ohne NFC wird der Start für das Büro gekennzeichnet.</string>
     <string name="schedule_same_day">%1$s · %2$s–%3$s</string>
-    <string name="worker_stop_manual_hint">Beenden Sie Ihre Schicht über „Ohne Tag beenden“.</string>
+    <string name="worker_stop_manual_hint">Dieses Telefon hat kein NFC. Sie können die Schicht hier beenden.</string>
     <string name="worker_schedule_note">Geplant · Arbeitszeit separat erfassen</string>
+
+    <!-- Blue Hour worker presentation -->
+    <string name="worker_active_title">Schicht läuft</string>
+    <string name="worker_elapsed">SEIT BEGINN</string>
+    <string name="worker_saved_locally">Auf diesem Telefon gespeichert · noch nicht bestätigt</string>
+    <string name="delivery_title">Übertragung</string>
+    <string name="delivery_blocked_detail">Die Verwaltung muss diese Einträge prüfen. Sie bleiben auf diesem Telefon gespeichert und werden nicht automatisch erneut gesendet. Bitte nennen Sie der Verwaltung die unten angezeigte Zeit.</string>
+    <string name="delivery_sign_in">Melden Sie sich mit demselben Konto an, damit diese Einträge übertragen werden können.</string>
+    <string name="delivery_not_scheduled">Die automatische Übertragung ist derzeit nicht aktiv. Öffnen Sie die App mit einer Internetverbindung, um die Übertragung erneut zu versuchen.</string>
+    <string name="delivery_automatic">Diese Einträge warten auf die Übertragung. Das Telefon versucht es automatisch erneut, sobald eine Verbindung verfügbar ist.</string>
+    <string name="delivery_no_attempt">Noch kein Übertragungsversuch.</string>
+    <string name="worker_receipt_title">Schicht beendet</string>
+    <plurals name="delivery_blocked_short">
+        <item quantity="one">%d Schicht braucht die Verwaltung</item>
+        <item quantity="other">%d Schichten brauchen die Verwaltung</item>
+    </plurals>
+    <plurals name="delivery_waiting_short">
+        <item quantity="one">%d Schicht noch auf diesem Telefon</item>
+        <item quantity="other">%d Schichten noch auf diesem Telefon</item>
+    </plurals>
+    <string name="worker_receipt_range">%1$s – %2$s</string>
+    <string name="worker_show">Ansehen</string>
+    <string name="worker_hide">Schließen</string>
+    <string name="worker_planned">Nächster geplanter Einsatz</string>
+    <string name="worker_help">Hilfe zur Schicht</string>
+    <string name="worker_receipt_done">Weiter</string>
+    <string name="worker_material_example">Zum Beispiel: 2 Mopps, Glasreiniger</string>
+    <string name="worker_material_no_push">Status hier prüfen. Keine Push-Mitteilungen.</string>
+    <string name="worker_material_details">So erhalten Sie Rückmeldung</string>
 </resources>

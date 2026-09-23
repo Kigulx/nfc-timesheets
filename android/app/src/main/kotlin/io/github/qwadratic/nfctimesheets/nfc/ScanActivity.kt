@@ -34,8 +34,7 @@ import io.github.qwadratic.nfctimesheets.TimeSheetsApplication
 import io.github.qwadratic.nfctimesheets.core.Zones
 import io.github.qwadratic.nfctimesheets.ui.TimeSheetsTheme
 import io.github.qwadratic.nfctimesheets.ui.WorkerCard
-import io.github.qwadratic.nfctimesheets.ui.WorkerIllustration
-import io.github.qwadratic.nfctimesheets.ui.WorkerPicture
+import io.github.qwadratic.nfctimesheets.ui.EntranceMark
 
 /**
  * EXPLICIT SCAN — the fallback for phones where the OS never dispatches the tag on its own.
@@ -88,7 +87,7 @@ class ScanActivity : LocalizedActivity() {
                         )
                         WorkerCard(Modifier.fillMaxWidth()) {
                             Column(Modifier.padding(22.dp), verticalArrangement = Arrangement.spacedBy(18.dp)) {
-                                WorkerIllustration(WorkerPicture.ENTRANCE)
+                                EntranceMark(status == ScanStatus.Unsupported)
                                 Text(text = stringResource(R.string.scan_hint), style = MaterialTheme.typography.bodyLarge)
                                 // Announce each read without requiring a visual search.
                                 Text(
