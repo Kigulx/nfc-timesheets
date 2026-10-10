@@ -86,3 +86,30 @@ their actual UI/device results and must be consulted separately.
   pending regardless of this static review verdict.
 
 No production change, migration, signing, push or deployment was performed by this review.
+
+## Combined PR integration re-review
+
+Reviewed the integration of PR 16 (`cec1092`) on 2026-10-10. Decisions 75, 77, 78
+and 79 were read in addition to the original decision review; decision 79's referenced
+`docs/AGENT-INTEGRATION.md` was inspected. The review was confined to the integration
+delta rather than repeating the original independent reviews.
+
+**Draft publication verdict: clear.** No integration code blocker found. Agent routes
+remain under `/agent/` with an explicit allowlist; evidence worker/admin routes preserve
+their authentication and tenant scope. Evidence settings remain mounted in the merged
+setup page. New shared database savepoint support does not replace the evidence row-lock
+transactions. The migration sequence is now 026 agent tokens, 027 tool calls, 028 shift
+evidence; the resolved workspace-test helper applies all three in order. The original
+026 evidence migration was renamed before deployment, not duplicated.
+
+Independently repeated branding: **OK, no TODOs**. Independently ran agent catalog tests:
+**4/4 passed**. The parent reports combined workspace/evidence, 53 agent tools, MCP bridge
+and full web verification passing. Evidence endpoints are intentionally not exposed by
+the 53-tool catalog, and the combined feature documentation states this.
+
+**Release documentation blocker:** incoming `docs/play-publication/` drafts describe
+the old 0.5.10 app and explicitly deny location/photos (store-listing, privacy-policy,
+data-safety) and a foreground service (declarations). Those statements are false for
+this combined feature build. They must be revised or clearly marked historical and
+not publishable for this build. This does not prevent a draft PR but prevents using
+those texts as the release's disclosure. Earlier native verification limits remain.
