@@ -25,6 +25,7 @@ struct ContentView: View {
     /// observable object over a JSON file - it does NOT touch the SwiftData store that
     /// holds unpushed shifts. See the header of Materials.swift.
     @State private var materials = MaterialStore()
+    @State private var locationReporter = ShiftLocationReporter.shared
     /// The lock reads this and nothing else. A separate @Query rather than a value passed
     /// up from LogView: the TAB BAR is what changes, and it is built here.
     @Query private var shifts: [Shift]
@@ -75,6 +76,17 @@ struct ContentView: View {
                 }
             }
             .environment(materials)
+            .task(id: worker.id) {
+                locationReporter.beginSession(workerId: worker.id)
+                defer { locationReporter.endSession() }
+                while !Task.isCancelled {
+                    locationReporter.configure(shift: shifts.first { $0.workerId == worker.id && $0.isOpen })
+                    try? await Task.sleep(for: .seconds(5))
+                }
+            }
+            .onChange(of: shifts.filter(\.isOpen).map(\.clientUuid)) { _, _ in
+                locationReporter.configure(shift: shifts.first { $0.workerId == worker.id && $0.isOpen })
+            }
             // At LAUNCH, not when the Materials tab is opened: the badge is the only
             // thing telling a worker something is waiting for them at the warehouse, and
             // a badge that only appears once you have looked is not a badge. Its own
@@ -211,6 +223,7 @@ struct SignInView: View {
 // MARK: - Log tab
 
 struct LogView: View {
+    @Environment(Session.self) private var session
     @Environment(\.modelContext) private var context
     @Environment(TapInbox.self) private var inbox
     /// Who the SERVER says is holding this phone. Not a preference, not editable, and
@@ -241,6 +254,12 @@ struct LogView: View {
     @State private var scanner = TapScanner()
     @State private var scanError: String?
     @State private var scanning = false
+    @State private var proofShift: Shift?
+    @State private var closePending = false
+    @State private var afterProof: (() -> Void)?
+    @State private var proofCompleting = false
+    @State private var proofManualClose = false
+    @State private var proofAutoClose = false
 
     private var open: [Shift] { shifts.filter(\.isOpen) }
     private var recent: [Shift] { Array(shifts.filter { !$0.isOpen }.prefix(5)) }
@@ -297,6 +316,11 @@ struct LogView: View {
                     idleList
                 }
             }
+            .safeAreaInset(edge: .bottom) {
+                if let message = ShiftLocationReporter.shared.message {
+                    Text(message).font(.footnote).padding(8).frame(maxWidth: .infinity).background(.regularMaterial)
+                }
+            }
             .navigationTitle(running == nil ? "TimeSheet" : "Shift running")
             .refreshable { await refresh() }
             // THE IN-APP SCAN IS BACK, and on NFCTagReaderSession, not the retired
@@ -332,6 +356,40 @@ struct LogView: View {
                 ResolveSheet(shifts: $unresolved, siteName: siteName)
             }
             .sheet(isPresented: $showManualStart) { manualStartSheet }
+            .sheet(item: $proofShift, onDismiss: { if !proofCompleting { closePending = false; afterProof = nil } }) { shift in
+                ShiftProofSheet(clientUuid: shift.clientUuidString) { proofId in
+                    guard shift.isOpen else { return }
+                    shift.proofId = proofId
+                    shift.pendingEvidenceEnd = .now
+                    shift.pendingEvidenceManual = proofManualClose
+                    shift.pendingEvidenceAuto = proofAutoClose
+                    try? context.save()
+                    proofCompleting = true
+                    Task {
+                        defer { proofCompleting = false }
+                        do {
+                            let response = try await ShiftAPI.close(clientUuid: shift.clientUuidString, endTime: shift.pendingEvidenceEnd ?? .now,
+                                autoClosed: proofAutoClose, manual: proofManualClose, proofId: proofId)
+                            guard case .eligible(let signedIn) = session.state, signedIn.id == worker.id else { return }
+                            let action = afterProof
+                            afterProof = nil
+                            closePending = false
+                            action?()
+                            shift.endTime = response.shift.endTime
+                            shift.autoClosed = response.shift.autoClosed
+                            shift.correctedAt = response.shift.correctedAt
+                            shift.pendingEvidenceEnd = nil
+                            shift.syncError = nil
+                            shift.syncBlocked = false
+                            shift.closeSyncedAt = .now
+                            try? context.save()
+                        } catch {
+                            scanError = String(localized: "Could not finish the shift. Check your connection and try again.")
+                            closePending = false
+                        }
+                    }
+                }
+            }
             // Coming back from the background is the only chance to re-arm a Live Activity
             // the worker dismissed by hand, or to notice that notifications were switched
             // on (or off) in Settings while the app was not running.
@@ -485,6 +543,37 @@ struct LogView: View {
     /// time in the moment, not the 8h timer guessing, so it must not enter the decision-10
     /// resolver - the server stamps corrected_at instead.
     private func manualStop() {
+        prepareCompletion(manual: true) { finishManualStop() }
+    }
+
+    private func prepareCompletion(manual: Bool = false, switched: Bool = false, _ action: @escaping () -> Void) {
+        guard !closePending, let shift = shifts.first(where: { $0.isOpen && $0.workerId == worker.id }) else { return }
+        closePending = true
+        Task {
+            if shift.proofOfWorkRequired == nil {
+                await adoptServerOpenShift(context: context)
+                await syncPending(context: context, workerId: worker.id)
+            }
+            guard case .eligible(let signedIn) = session.state, signedIn.id == worker.id,
+                  shift.isOpen else { closePending = false; return }
+            guard let required = shift.proofOfWorkRequired else {
+                scanError = String(localized: "Connect to the internet to check this shift before finishing it.")
+                closePending = false
+                return
+            }
+            if required {
+                proofManualClose = manual
+                proofAutoClose = switched
+                afterProof = action
+                proofShift = shift
+            } else {
+                closePending = false
+                action()
+            }
+        }
+    }
+
+    private func finishManualStop() {
         guard let running = shifts.first(where: \.isOpen) else { return }
         running.endTime = .now
         running.manualClose = true
@@ -578,7 +667,14 @@ struct LogView: View {
     ///
     /// `manual` (decision-56) changes exactly one thing: the flag stamped on a row this
     /// function was going to write anyway. It is NOT a second code path - see startManual().
-    private func handleTap(_ locationId: String, manual: Bool = false) {
+    private func handleTap(_ locationId: String, manual: Bool = false, proofApproved: Bool = false) {
+        guard !closePending else { return }
+        if shifts.contains(where: \.isOpen) && !proofApproved {
+            prepareCompletion(switched: shifts.first(where: \.isOpen)?.locationId != locationId) {
+                handleTap(locationId, manual: manual, proofApproved: true)
+            }
+            return
+        }
         let trace = Telemetry.beginTap(locationId: locationId, cachedLocations: sites.count)
         let write = trace.child("db", "shift.local_write")
 
@@ -754,6 +850,7 @@ struct ResolveSheet: View {
     let siteName: (String) -> String
 
     @State private var picked: [Int: Date] = [:]
+    @State private var proofTarget: WireShift?
     @State private var error: String?
     @State private var busy = false
     /// How many there were when this sheet opened, so the worker can watch the queue
@@ -789,6 +886,13 @@ struct ResolveSheet: View {
                 ToolbarItem(placement: .cancellationAction) { Button("Later") { dismiss() } }
             }
             .task { if total == 0 { total = shifts.count } }
+            .sheet(item: $proofTarget) { shift in
+                if let key = shift.clientUuid {
+                    ShiftProofSheet(clientUuid: key) { proofId in
+                        Task { await save(shift, proofId: proofId) }
+                    }
+                }
+            }
         }
     }
 
@@ -804,11 +908,19 @@ struct ResolveSheet: View {
                 set: { picked[shift.id] = $0 })
     }
 
-    private func save(_ shift: WireShift) async {
+    private func save(_ shift: WireShift, proofId: String? = nil) async {
+        if shift.proofOfWorkRequired == true && proofId == nil {
+            guard shift.clientUuid != nil else {
+                error = String(localized: "This shift is missing its location and can't be sent.")
+                return
+            }
+            proofTarget = shift
+            return
+        }
         busy = true
         defer { busy = false }
         let end = picked[shift.id] ?? shift.endTime ?? .now
-        if let failure = await resolveShift(context: context, shift: shift, end: end) {
+        if let failure = await resolveShift(context: context, shift: shift, end: end, proofId: proofId) {
             error = failure
             return
         }

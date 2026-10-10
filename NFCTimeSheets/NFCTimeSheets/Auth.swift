@@ -138,6 +138,7 @@ final class Session {
     /// The last row in Settings. Revokes the session server-side first so a stolen phone
     /// cannot keep the cookie alive, then drops everything locally even if that call failed.
     func signOut() async {
+        ShiftLocationReporter.shared.endSession()
         busy = true
         defer { busy = false }
         try? await AuthAPI.logout()
@@ -174,6 +175,7 @@ final class Session {
     /// could not reach the server, leaving the cookie on the phone would sign the next
     /// person straight back in as this worker.
     private func clearLocalSession() {
+        ShiftLocationReporter.shared.endSession()
         clearCache()
         Telemetry.clearWorker()
         let storage = HTTPCookieStorage.shared

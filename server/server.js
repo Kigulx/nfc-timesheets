@@ -23,6 +23,7 @@ import { webhookRoutes } from "./routes/webhooks.js";
 import { workspaceRoutes } from "./routes/workspaces.js";
 import { trialRequestRoutes } from "./routes/trial-requests.js";
 import { scheduleRoutes } from "./routes/schedule.js";
+import { shiftEvidenceRoutes } from "./routes/shift-evidence.js";
 import { wellknown } from "./routes/wellknown.js";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
@@ -83,6 +84,7 @@ const routes = [
   ...workspaceRoutes,
   ...trialRequestRoutes,
   ...scheduleRoutes,
+  ...shiftEvidenceRoutes,
 ];
 
 async function health() {
@@ -291,7 +293,7 @@ async function handle(req, res, ctx) {
     void withWorkspace(session.tenantId, () => recordPhoneHeartbeat(session.workerId, req.headers)).catch(() => {});
   }
 
-  const body = route.method === "GET" || route.method === "DELETE" ? {} : await readJson(req);
+  const body = route.method === "GET" || route.method === "DELETE" ? {} : await readJson(req, route.bodyLimit);
   const invoke = () => route.handler({
     params,
     query: url.searchParams,
@@ -315,7 +317,13 @@ async function handle(req, res, ctx) {
       `${route.method} ${route.path}`, route.auth === "flags" ? "feature_flags" : "admins",
       route.auth === "flags" ? params.name : String(session.adminId)]));
   }
-  sendJson(res, result.status, result.body, result.headers);
+  if (result.binary) {
+    res.writeHead(result.status, { "content-type": result.contentType, "content-length": result.binary.length,
+      "cache-control": "no-store", "x-content-type-options": "nosniff" });
+    res.end(result.binary);
+  } else {
+    sendJson(res, result.status, result.body, result.headers);
+  }
 }
 
 /**
