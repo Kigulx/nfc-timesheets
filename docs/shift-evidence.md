@@ -3,6 +3,16 @@
 Developed in `codex/shift-evidence`, based on `41925c9`, in a separate worktree.
 No production deployment, migration, release signing, or change to another agent's checkout.
 
+## Combined PR integration
+
+PR #16 at `cec1092` is included in this branch. Its agent migrations retain numbers
+026/027; shift evidence is now 028. The workspace test database applies all three in
+that order. The combined branch passed workspace/evidence integration, the 53-tool
+agent integration suite, four catalog tests, MCP bridge checks, branding and full web
+verification. Native implementation is unchanged by this integration; the iOS and
+physical-device verification limits below still apply. The 53-tool catalog does not
+yet expose the new shift-evidence settings or private photo endpoints.
+
 ## Administrator workflow
 
 Open company setup, select the company step, and use **Shift evidence / Schichtnachweise**.
@@ -36,7 +46,7 @@ session. This is observed device evidence, not independent proof of presence or 
 
 ## Storage and integration
 
-Migration `026_shift_evidence.sql` adds tenant-scoped policy, coordinates and a bounded
+Migration `028_shift_evidence.sql` adds tenant-scoped policy, coordinates and a bounded
 photo per shift in PostgreSQL, plus policy snapshot/proof fields on shifts. No new dependency,
 object store, server, ORM or router is introduced. Photo reads are authenticated, `no-store`
 and `nosniff`; photo/coordinate fields are redacted in all four telemetry scrubbers.

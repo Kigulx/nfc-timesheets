@@ -3,7 +3,6 @@
 import Link from 'next/link'
 import { useTranslations } from 'next-intl'
 import { type FormEvent, useEffect, useRef, useState } from 'react'
-import { AddressSearch } from '@/components/AddressSearch'
 import { Field } from '@/components/Field'
 import { useLocaleSetting } from '@/components/IntlProvider'
 import { ShiftPolicySettings } from '@/components/ShiftPolicySettings'
@@ -113,9 +112,26 @@ export default function SetupPage() {
                       requestId.current = ''
                     }}
                     aria-current={current === index ? 'step' : undefined}
+                    className={done[index] ? 'is-done' : undefined}
                   >
                     <span className="setup-number" aria-hidden="true">
-                      {index + 1}
+                      {done[index] ? (
+                        <svg
+                          aria-hidden="true"
+                          width="14"
+                          height="14"
+                          viewBox="0 0 16 16"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2.5"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        >
+                          <path d="M3 8.5l3.2 3.2L13 4.8" />
+                        </svg>
+                      ) : (
+                        index + 1
+                      )}
                     </span>
                     <span>
                       {t(key)}
@@ -172,19 +188,16 @@ export default function SetupPage() {
                   </Field>
                 )}
                 {current === 1 && (
-                  <>
-                    <Field id="setup-address" label={t('address')} help={t('addressHint')}>
-                      <input
-                        value={address}
-                        onChange={(event) => setAddress(event.target.value)}
-                        required
-                        maxLength={300}
-                        autoComplete="street-address"
-                        disabled={pending}
-                      />
-                    </Field>
-                    <AddressSearch value={address} onSelect={setAddress} disabled={pending} />
-                  </>
+                  <Field id="setup-address" label={t('address')} help={t('addressHint')}>
+                    <input
+                      value={address}
+                      onChange={(event) => setAddress(event.target.value)}
+                      required
+                      maxLength={300}
+                      autoComplete="street-address"
+                      disabled={pending}
+                    />
+                  </Field>
                 )}
                 {current === 2 && (
                   <Field id="setup-rate" label={t('hourlyRate')} help={t('rateSetupHint')}>
@@ -212,11 +225,6 @@ export default function SetupPage() {
                     </button>
                   )}
                 </div>
-                {current > 0 && (
-                  <Link href={current === 1 ? '/locations/' : '/workers/'}>
-                    {t(current === 1 ? 'manageLocations' : 'manageWorkers')}
-                  </Link>
-                )}
               </form>
             ) : (
               <>
@@ -255,9 +263,15 @@ export default function SetupPage() {
                     </li>
                   ))}
                 </ul>
-                <button type="button" className="btn btn-ghost" onClick={reload}>
-                  {t('checkAgain')}
-                </button>
+                {done[3] ? (
+                  <Link className="btn btn-primary" href="/workspace/">
+                    {t('openDashboard')}
+                  </Link>
+                ) : (
+                  <button type="button" className="btn btn-ghost" onClick={reload}>
+                    {t('checkAgain')}
+                  </button>
+                )}
               </>
             )}
           </section>

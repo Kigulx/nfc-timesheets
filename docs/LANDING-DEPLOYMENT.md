@@ -1,22 +1,22 @@
 # Выкладка лендинга
 
 Лендинг и админка собираются вместе. Публичный адрес после успешной выкладки:
-`https://schimmer-glanz.exe.xyz/product/`.
-Корень `/` сейчас открывает вход/рабочее пространство админки, а не лендинг.
+`https://schimmer-glanz.exe.xyz/`. Админка открывается по `/admin/` (вход или
+рабочее пространство по роли).
 
 ## Где лежат файлы
 
 | Назначение | В репозитории | На сервере после выкладки |
 | --- | --- | --- |
-| Страница лендинга | `web/app/product/page.tsx` | `public/product/index.html` внутри `/srv/nfc` |
-| Стили и анимация | `web/app/product/product.css` | Собранные файлы в `/srv/nfc/public/_next/` |
+| Страница лендинга | `web/components/LandingPage.tsx`, маршрут `web/app/page.tsx` | `public/index.html` внутри `/srv/nfc` |
+| Стили и анимация | `web/components/landing.css` | Собранные файлы в `/srv/nfc/public/_next/` |
 | Немецкие и английские тексты | `web/messages/de.json`, `web/messages/en.json` | Включены в сборку |
 | Картинки интеграций | `web/public/integrations/` | `/srv/nfc/public/integrations/` |
 | Полная готовая сборка | `web/out/` после `pnpm build` или `pnpm verify` | `/srv/nfc/public/` |
 | Приём заявок | `server/routes/trial-requests.js` | `/srv/nfc/routes/trial-requests.js` |
 | Таблица заявок | `server/db/migrations/024_trial_requests.sql` | Применяется мигратором к Postgres |
 
-Не переносите только `product/index.html`: странице нужны общие JS/CSS из `_next`
+Не переносите только `index.html`: странице нужны общие JS/CSS из `_next`
 и другие файлы полной сборки. Форма отправляет `POST /public/trial-requests` на
 тот же сервер. Заявки доступны суперадминистратору через `/platform/`; этот
 обработчик сохраняет запись в базе, но сам не отправляет письмо на почту.
@@ -28,7 +28,7 @@
 3. Дождаться успешного выполнения. Изменения `web/`, `server/` или `ops/` в
    `main` запускают этот workflow автоматически. Создание PR и push нашей
    рабочей ветки сами по себе эту выкладку в основном репозитории не запускают.
-4. Проверить `/product/`, DE/EN, мобильную ширину и отправку согласованной
+4. Проверить `/`, `/admin/`, DE/EN, мобильную ширину и отправку согласованной
    тестовой заявки; убедиться, что заявка появилась в панели платформы.
 
 Конфигурация: `.github/workflows/server-deploy.yml`. Она запускает единый
@@ -71,6 +71,30 @@ Corepack/pnpm, Bash, rsync и настроенным SSH:
 
 `timesheets.exe.xyz` — отдельный постоянный домен NFC-меток. Лендинг туда
 не выкладывается; `ops/tag-host/deploy.sh` для этой задачи не нужен.
+
+## Ссылки на скачивание приложения
+
+Блок «Die App / The app» на лендинге (`#app`) ведёт в тестовые каналы, а не в публичные
+магазины. Ссылки лежат в одном месте, `web/lib/downloads.ts`:
+
+- **iPhone:** публичная ссылка TestFlight группы `ext` (App Store Connect → NFC TimeSheets →
+  TestFlight → `ext` → Public Link). Работает для любого, кто поставил TestFlight.
+- **Android, основной путь:** прямая загрузка подписанного APK, `web/public/downloads/nfc-timesheets.apk`
+  (ссылка `ANDROID_APK_URL`). Открыт для всех, без Google-аккаунта и списка тестеров. Файл
+  подписан upload-ключом владельца. Обновить: `cd android && ./gradlew assembleRelease &&
+  ./dist-apk.sh`, затем скопировать `dist/nfc-timesheets-<версия>-release.apk` в
+  `web/public/downloads/nfc-timesheets.apk` (имя файла постоянное) и заменить единственную копию
+  на рабочем столе (см. AGENTS.md). `dist-apk.sh` отказывается от debug-подписи. Телефон,
+  поставивший APK, не сможет потом обновиться поверх из Play (подписи разные, Google подписывает
+  своим ключом): нужно удалить приложение, а это сбросит сессию работника.
+- **Android, второй путь:** ссылка на внутреннее тестирование Play (Play Console → Тестирование и
+  выпуск → Внутреннее тестирование → Тестировщики → «Копировать ссылку»). Принять её могут только
+  аккаунты из списка «NFC TimeSheets test» (до 100 человек). Приложение в Play пока «Черновик»,
+  поэтому в магазине оно называется `io.github.qwadratic.NFCTimeSheets (unreviewed)`.
+
+Скриншоты в блоке (`web/public/app-guide/{ios,android}-{de,en}.png`) сняты с экрана входа
+сборок `main` от 07.10.2026 (iOS Simulator, Android-эмулятор, Android 0.5.10 (34)). Если
+экран входа изменится, снимите заново и замените файлы с теми же именами.
 
 ## Что ещё пока является заглушкой
 

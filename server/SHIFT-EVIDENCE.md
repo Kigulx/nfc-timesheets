@@ -1,6 +1,6 @@
 # Shift location and photo evidence
 
-Migration `026_shift_evidence.sql` must precede the server release. Dependencies remain
+Migration `028_shift_evidence.sql` must precede the server release. Dependencies remain
 `pg` and `@sentry/node`. Tables use forced company RLS and composite company/shift foreign
 keys. Photos are private PostgreSQL `bytea`, at most 2 MiB per shift. There is no public
 photo URL or filesystem upload directory.

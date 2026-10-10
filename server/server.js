@@ -25,6 +25,7 @@ import { trialRequestRoutes } from "./routes/trial-requests.js";
 import { scheduleRoutes } from "./routes/schedule.js";
 import { shiftEvidenceRoutes } from "./routes/shift-evidence.js";
 import { wellknown } from "./routes/wellknown.js";
+import { handleAgent } from "./agent/dispatch.js";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 
@@ -228,6 +229,10 @@ async function handle(req, res, ctx) {
     return sendJson(res, 400, { error: "bad_request" });
   }
   const pathname = url.pathname;
+  if (pathname === "/agent" || pathname.startsWith("/agent/")) {
+    ctx.loggable = true;
+    return handleAgent(req, res, url, routes, clientIp(req));
+  }
   const hit = findRoute(req.method, pathname);
 
   // A GET/HEAD on a path the API only answers for another verb is the admin panel asking

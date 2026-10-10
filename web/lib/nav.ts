@@ -52,7 +52,7 @@ export const NAV_GROUPS: readonly NavGroup[] = [
     headingKey: 'groupToday',
     hidden: true,
     items: [
-      { href: '/', labelKey: 'dashboard' },
+      { href: '/admin/', labelKey: 'dashboard' },
       { href: '/shifts/', labelKey: 'shifts' },
       { href: '/material-requests/', labelKey: 'materialRequests' },
     ],
@@ -167,6 +167,17 @@ export const FUTURE_NAV: readonly NavKey[] = []
 
 /** The sign-in screen. Rendered without the admin shell (no nav, no sign-out control). */
 export const LOGIN_PATH = '/login/'
+
+/**
+ * The admin's front door. `/` is the public landing page; `/admin/` is the old home: it
+ * sends a signed-in account to its own workspace and an anonymous visitor to `/login/`.
+ */
+export const ADMIN_PATH = '/admin/'
+
+/** The landing page renders without the admin shell and never calls the account endpoint. */
+export function isLandingPath(pathname: string): boolean {
+  return pathname === '/'
+}
 
 /**
  * Where a 401/403 sends the director: `/login/`, carrying the screen and filters he was on
