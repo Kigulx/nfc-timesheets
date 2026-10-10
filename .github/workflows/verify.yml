@@ -134,7 +134,10 @@ jobs:
           PGPASSWORD: postgres
         run: |
           set -euo pipefail
-          for check in check-api.js check-sms-flag.mjs; do
+          node --test agent/catalog.test.js
+          node ../tools/check-agent-mcp.mjs
+          node ../ops/check-branding.mjs
+          for check in check-agent.js check-api.js check-sms-flag.mjs; do
             echo "=== $check ==="
             node "$check" 2>&1 | tee "/tmp/$check.log"
             if grep -q 'SKIP' "/tmp/$check.log"; then
