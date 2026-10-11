@@ -1,3 +1,5 @@
+> **Publication blocked for the combined shift-evidence release.** This document describes the earlier app and has not been reconciled with optional active-shift location collection and camera photo proof. Statements that the app does not collect location or photos are obsolete for the new feature. Do not submit this draft or use its declarations for the combined release until permissions, background location, data collection/sharing, retention/deletion and the privacy policy have been reviewed and updated. iOS/native release verification is also pending.
+
 # Безопасность данных (форма Data safety)
 
 Ответы выведены из кода Android-приложения 0.5.10 и сервера. Всё, что отмечено ⚠, владелец

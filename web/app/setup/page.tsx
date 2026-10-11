@@ -5,6 +5,7 @@ import { useTranslations } from 'next-intl'
 import { type FormEvent, useEffect, useRef, useState } from 'react'
 import { Field } from '@/components/Field'
 import { useLocaleSetting } from '@/components/IntlProvider'
+import { ShiftPolicySettings } from '@/components/ShiftPolicySettings'
 import { useWorkspace } from '@/components/useWorkspace'
 import { ApiError, saveLocation, saveWorker } from '@/lib/api'
 import { completedSetup, saveCompany } from '@/lib/workspaces'
@@ -274,6 +275,7 @@ export default function SetupPage() {
               </>
             )}
           </section>
+          {current === 0 && <ShiftPolicySettings />}
           <div className="workspace-actions">
             <Link href="/workspace/">{t('backOverview')}</Link>
             <span className="workspace-note">{t('resumeHint')}</span>

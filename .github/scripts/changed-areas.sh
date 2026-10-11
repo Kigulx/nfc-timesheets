@@ -39,5 +39,5 @@ emit() {
 
 emit android '^android/'
 emit ios '^NFCTimeSheets/'
-emit server '^server/'
+emit server '^(server/|tools/(agent-mcp|check-agent-mcp)\.mjs$)'
 emit web '^(web|server)/'
