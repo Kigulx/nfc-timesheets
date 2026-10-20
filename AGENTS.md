@@ -175,6 +175,11 @@ Decision checklist (keep updated as decisions are added):
   Xcode capability are the OWNER's one click — no agent edits the entitlement or
   `project.pbxproj`; the code degrades in words instead (decision-49, `docs/NFC-WRITE-SETUP.md`)
 
+- A superadmin ENTERS a company only explicitly: a 1-hour session OF that company's first
+  admin carrying `sessions.impersonator_admin_id`, a persistent banner, no password change
+  inside, every non-GET audited in the company's `action_log` with origin `superadmin`
+  (decision-80, `docs/superadmin-impersonation.md`, status proposed)
+
 ~~decision-37~~ (zones, no area) is SUPERSEDED by decision-43 and nothing from it shipped.
 
 Decisions can only be changed by creating a new decision record that supersedes the old one.
